@@ -1,0 +1,202 @@
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h2>Representative Dashboard</h2>
+      <p class="text-muted">Welcome back, <%= current_user.display_name %>!</p>
+    </div>
+  </div>
+
+  <!-- Unassigned Requests -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Unassigned Requests</h5>
+          <span class="badge bg-dark"><%= @unassigned_requests.count %> requests</span>
+        </div>
+        <div class="card-body p-0">
+          <% if @unassigned_requests.empty? %>
+            <div class="p-4 text-center">
+              <p class="text-muted mb-0">There are no unassigned requests at this time.</p>
+            </div>
+          <% else %>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Participant</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Payment</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @unassigned_requests.each do |request| %>
+                    <tr>
+                      <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                      <td><%= User.find(request.user_id).display_name %></td>
+                      <td><%= Product.find(request.product_id).name %></td>
+                      <td><%= request.quantity %></td>
+                      <td>
+                        <% if request.payment_type == 'points' %>
+                          <span class="badge bg-success">Points</span>
+                        <% elsif request.payment_type == 'paypal' %>
+                          <span class="badge bg-primary">PayPal</span>
+                        <% else %>
+                          <span class="badge bg-info">Credit Card</span>
+                        <% end %>
+                      </td>
+                      <td><%= time_ago_in_words(request.created_at) %> ago</td>
+                      <td>
+                        <div class="btn-group btn-group-sm">
+                          <%= link_to request_path(request), class: "btn btn-outline-primary" do %>
+                            <i class="fas fa-eye"></i> View
+                          <% end %>
+                          <%= button_to assign_request_path(request), method: :post, class: "btn btn-success ms-1" do %>
+                            <i class="fas fa-user-check"></i> Assign to Me
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assigned Requests -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Your Assigned Requests</h5>
+          <span class="badge bg-light text-dark"><%= @assigned_requests.count %> requests</span>
+        </div>
+        <div class="card-body p-0">
+          <% if @assigned_requests.empty? %>
+            <div class="p-4 text-center">
+              <p class="text-muted mb-0">You don't have any assigned requests yet.</p>
+              <small>Assign requests to yourself from the unassigned list above.</small>
+            </div>
+          <% else %>
+            <ul class="nav nav-tabs" id="assignedRequestsTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                  All (<%= @assigned_requests.count %>)
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="submitted-tab" data-bs-toggle="tab" data-bs-target="#submitted" type="button" role="tab">
+                  Submitted (<%= @assigned_requests.count { |r| r.status == 'SUBMITTED' } %>)
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="awaiting-payment-tab" data-bs-toggle="tab" data-bs-target="#awaiting-payment" type="button" role="tab">
+                  Awaiting Payment (<%= @assigned_requests.count { |r| r.status == 'AWAITING_PAYMENT' } %>)
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="paid-tab" data-bs-toggle="tab" data-bs-target="#paid" type="button" role="tab">
+                  Paid (<%= @assigned_requests.count { |r| r.status == 'PAID' } %>)
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="shipped-tab" data-bs-toggle="tab" data-bs-target="#shipped" type="button" role="tab">
+                  Shipped (<%= @assigned_requests.count { |r| r.status == 'SHIPPED' } %>)
+                </button>
+              </li>
+            </ul>
+            
+            <div class="tab-content" id="assignedRequestsTabContent">
+              <div class="tab-pane fade show active" id="all" role="tabpanel">
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>ID</th>
+                        <th>Participant</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% @assigned_requests.each do |request| %>
+                        <tr>
+                          <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                          <td><%= User.find(request.user_id).display_name %></td>
+                          <td><%= Product.find(request.product_id).name %></td>
+                          <td><%= request.quantity %></td>
+                          <td>
+                            <% if request.payment_type == 'points' %>
+                              <span class="badge bg-success">Points</span>
+                            <% elsif request.payment_type == 'paypal' %>
+                              <span class="badge bg-primary">PayPal</span>
+                            <% else %>
+                              <span class="badge bg-info">Credit Card</span>
+                            <% end %>
+                          </td>
+                          <td>
+                            <% case request.status 
+                               when 'SUBMITTED' %>
+                              <span class="badge bg-secondary">Submitted</span>
+                            <% when 'AWAITING_PAYMENT' %>
+                              <span class="badge bg-warning text-dark">Awaiting Payment</span>
+                            <% when 'PAID' %>
+                              <span class="badge bg-info">Paid</span>
+                            <% when 'SHIPPED' %>
+                              <span class="badge bg-primary">Shipped</span>
+                            <% when 'RECEIVED' %>
+                              <span class="badge bg-success">Received</span>
+                            <% when 'BACKORDERED' %>
+                              <span class="badge bg-danger">Backordered</span>
+                            <% when 'CANCELED' %>
+                              <span class="badge bg-danger">Canceled</span>
+                            <% end %>
+                          </td>
+                          <td><%= time_ago_in_words(request.updated_at) %> ago</td>
+                          <td>
+                            <%= link_to request_path(request), class: "btn btn-sm btn-outline-primary" do %>
+                              <i class="fas fa-eye"></i> View
+                            <% end %>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- Other tab panes would be implemented similarly with filtered data -->
+              <div class="tab-pane fade" id="submitted" role="tabpanel">
+                <!-- Submitted requests table -->
+              </div>
+              
+              <div class="tab-pane fade" id="awaiting-payment" role="tabpanel">
+                <!-- Awaiting payment requests table -->
+              </div>
+              
+              <div class="tab-pane fade" id="paid" role="tabpanel">
+                <!-- Paid requests table -->
+              </div>
+              
+              <div class="tab-pane fade" id="shipped" role="tabpanel">
+                <!-- Shipped requests table -->
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

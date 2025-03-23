@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    function isRepresentative() {
+      return isSignedIn() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'representative');
+    }
+    
+    function isParticipant() {
+      return isSignedIn() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'participant');
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAssignedRep(requestId) {
+      return isSignedIn() && 
+        isRepresentative() && 
+        get(/databases/$(database)/documents/requests/$(requestId)).data.assigned_rep_id == request.auth.uid;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin();
+    }
+    
+    // Requests collection
+    match /requests/{requestId} {
+      // Anyone signed in can read requests
+      allow read: if isSignedIn();
+      
+      // Participants can create requests
+      allow create: if isParticipant() || isAdmin();
+      
+      // Participants can update their own requests if in SUBMITTED state
+      // Representatives can update requests assigned to them
+      // Admins can update any request
+      allow update: if isAdmin() || 
+                     (isParticipant() && resource.data.user_id == request.auth.uid && 
+                      (resource.data.status == 'SUBMITTED' || 
+                       request.resource.data.status == 'PAID' || 
+                       request.resource.data.status == 'RECEIVED')) ||
+                     (isRepresentative() && (resource.data.assigned_rep_id == request.auth.uid || 
+                                           resource.data.assigned_rep_id == null));
+      
+      // Only admins can delete requests
+      allow delete: if isAdmin();
+    }
+    
+    // Messages collection
+    match /requests/{requestId}/messages/{messageId} {
+      // Anyone signed in can read messages
+      allow read: if isSignedIn();
+      
+      // Participants can create messages for their own requests
+      // Representatives can create messages for requests assigned to them
+      // Admins can create messages for any request
+      allow create: if isAdmin() || 
+                     (isParticipant() && get(/databases/$(database)/documents/requests/$(requestId)).data.user_id == request.auth.uid) ||
+                     (isRepresentative() && get(/databases/$(database)/documents/requests/$(requestId)).data.assigned_rep_id == request.auth.uid);
+      
+      // Only admins can update or delete messages
+      allow update, delete: if isAdmin();
+    }
+    
+    // Points collection
+    match /points/{userId} {
+      // Participants can read their own points
+      // Admins can read any points
+      allow read: if isAdmin() || (isParticipant() && isOwner(userId));
+      
+      // Only admins can create, update, or delete points
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      // Anyone signed in can read products
+      allow read: if isSignedIn();
+      
+      // Only admins can create, update, or delete products
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Admin emails collection
+    match /admin_emails/{emailId} {
+      // Only admins can read, create, update, or delete admin emails
+      allow read, write: if isAdmin();
+    }
+  }
+}

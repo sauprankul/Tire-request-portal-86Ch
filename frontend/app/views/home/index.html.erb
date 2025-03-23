@@ -1,0 +1,38 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-8 offset-md-2 text-center">
+      <h1 class="display-4">🏎 Tire Request Portal</h1>
+      <p class="lead">Welcome to the 86 Challenge Tire Request Portal</p>
+      
+      <div class="mt-5">
+        <% if user_signed_in? %>
+          <% if current_user.approved? %>
+            <%= link_to "Go to Dashboard", dashboard_path, class: "btn btn-primary btn-lg" %>
+          <% else %>
+            <div class="alert alert-warning">
+              Your account is pending approval. We'll notify you when it's approved.
+            </div>
+            <%= link_to "Check Status", pending_path, class: "btn btn-secondary btn-lg" %>
+          <% end %>
+        <% else %>
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Sign in with Google</h5>
+              <p class="card-text">Please sign in with your Google account to access the portal.</p>
+              <%= link_to "Sign in with Google", "/auth/google_oauth2", method: :post, class: "btn btn-primary btn-lg" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+      <div class="mt-5">
+        <h3>About the Portal</h3>
+        <p>
+          The Tire Request Portal allows 86 Challenge participants to request tires via points or payments,
+          and enables representatives to process these requests. Admins manage users, assign points, and
+          oversee all requests.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,230 @@
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2>Tire Requests</h2>
+      <% if params[:user_id].present? && @user %>
+        <p class="text-muted">Showing requests for <%= @user.display_name %></p>
+      <% elsif params[:status].present? %>
+        <p class="text-muted">Showing <%= params[:status].titleize %> requests</p>
+      <% end %>
+    </div>
+    <div class="col-md-4 text-end">
+      <% if current_user.participant? %>
+        <%= link_to new_request_path, class: "btn btn-primary" do %>
+          <i class="fas fa-plus-circle"></i> New Request
+        <% end %>
+      <% end %>
+      <%= link_to dashboard_path, class: "btn btn-outline-secondary ms-2" do %>
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+      <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false">
+        <i class="fas fa-filter"></i> Filter Requests
+      </button>
+    </div>
+    <div class="collapse <%= params[:commit] == 'Apply Filters' ? 'show' : '' %>" id="filterCollapse">
+      <div class="card-body">
+        <%= form_with(url: requests_path, method: :get, class: "row g-3") do |f| %>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <%= f.select :status, options_for_select([['All Statuses', '']] + Request::STATUSES.map { |s| [s.titleize, s] }, params[:status]), {}, { class: 'form-select' } %>
+          </div>
+          
+          <% if current_user.admin? || current_user.representative? %>
+            <div class="col-md-3">
+              <label class="form-label">Participant</label>
+              <%= f.select :user_id, options_for_select([['All Participants', '']] + User.find_all_by_role('participant').select { |u| u.approved? }.map { |u| [u.display_name, u.id] }, params[:user_id]), {}, { class: 'form-select' } %>
+            </div>
+            
+            <% if current_user.admin? %>
+              <div class="col-md-3">
+                <label class="form-label">Representative</label>
+                <%= f.select :assigned_rep_id, options_for_select([['All Representatives', ''], ['Unassigned', 'none']] + User.find_all_by_role('representative').select { |u| u.approved? }.map { |u| [u.display_name, u.id] }, params[:assigned_rep_id]), {}, { class: 'form-select' } %>
+              </div>
+            <% end %>
+          <% end %>
+          
+          <div class="col-md-3">
+            <label class="form-label">Date Range</label>
+            <div class="input-group">
+              <%= f.date_field :start_date, class: 'form-control', value: params[:start_date], placeholder: 'From' %>
+              <span class="input-group-text">to</span>
+              <%= f.date_field :end_date, class: 'form-control', value: params[:end_date], placeholder: 'To' %>
+            </div>
+          </div>
+          
+          <div class="col-md-12 mt-3">
+            <button type="submit" name="commit" value="Apply Filters" class="btn btn-primary">
+              <i class="fas fa-filter"></i> Apply Filters
+            </button>
+            <%= link_to requests_path, class: "btn btn-outline-secondary ms-2" do %>
+              <i class="fas fa-times"></i> Clear Filters
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requests Table -->
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <% if @requests.empty? %>
+        <div class="p-5 text-center">
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h5>No requests found</h5>
+          <p class="text-muted">
+            <% if params[:commit] == 'Apply Filters' %>
+              No requests match your filter criteria. Try adjusting your filters.
+            <% elsif current_user.participant? %>
+              You haven't made any tire requests yet.
+              <%= link_to "Request tires now", new_request_path, class: "btn btn-primary btn-sm ms-2" %>
+            <% else %>
+              There are no tire requests in the system.
+            <% end %>
+          </p>
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <% if current_user.admin? || current_user.representative? %>
+                  <th>Participant</th>
+                <% end %>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Payment</th>
+                <th>Status</th>
+                <% if current_user.admin? %>
+                  <th>Representative</th>
+                <% end %>
+                <th>Created</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @requests.each do |request| %>
+                <tr>
+                  <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                  
+                  <% if current_user.admin? || current_user.representative? %>
+                    <td><%= User.find(request.user_id).display_name %></td>
+                  <% end %>
+                  
+                  <td><%= Product.find(request.product_id).name %></td>
+                  <td><%= request.quantity %></td>
+                  
+                  <td>
+                    <% if request.payment_type == 'points' %>
+                      <span class="badge bg-success">Points</span>
+                    <% elsif request.payment_type == 'paypal' %>
+                      <span class="badge bg-primary">PayPal</span>
+                    <% else %>
+                      <span class="badge bg-info">Credit Card</span>
+                    <% end %>
+                  </td>
+                  
+                  <td>
+                    <% case request.status 
+                       when 'SUBMITTED' %>
+                      <span class="badge bg-secondary">Submitted</span>
+                    <% when 'AWAITING_PAYMENT' %>
+                      <span class="badge bg-warning text-dark">Awaiting Payment</span>
+                    <% when 'PAID' %>
+                      <span class="badge bg-info">Paid</span>
+                    <% when 'SHIPPED' %>
+                      <span class="badge bg-primary">Shipped</span>
+                    <% when 'RECEIVED' %>
+                      <span class="badge bg-success">Received</span>
+                    <% when 'BACKORDERED' %>
+                      <span class="badge bg-danger">Backordered</span>
+                    <% when 'CANCELED' %>
+                      <span class="badge bg-danger">Canceled</span>
+                    <% end %>
+                  </td>
+                  
+                  <% if current_user.admin? %>
+                    <td>
+                      <% if request.assigned_rep_id %>
+                        <%= User.find(request.assigned_rep_id).display_name %>
+                      <% else %>
+                        <span class="text-muted">Unassigned</span>
+                      <% end %>
+                    </td>
+                  <% end %>
+                  
+                  <td><%= request.created_at.strftime("%b %d, %Y") %></td>
+                  <td><%= time_ago_in_words(request.updated_at) %> ago</td>
+                  
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <%= link_to request_path(request), class: "btn btn-outline-primary" do %>
+                        <i class="fas fa-eye"></i> View
+                      <% end %>
+                      
+                      <% if current_user.admin? || (current_user.id == request.user_id && request.status == 'SUBMITTED') %>
+                        <%= link_to edit_request_path(request), class: "btn btn-outline-secondary" do %>
+                          <i class="fas fa-edit"></i>
+                        <% end %>
+                      <% end %>
+                      
+                      <% if current_user.representative? && request.assigned_rep_id.nil? %>
+                        <%= button_to assign_request_path(request), method: :post, class: "btn btn-outline-success" do %>
+                          <i class="fas fa-user-check"></i>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if @requests.respond_to?(:total_pages) && @requests.total_pages > 1 %>
+    <div class="d-flex justify-content-center mt-4">
+      <nav aria-label="Page navigation">
+        <ul class="pagination">
+          <% if @requests.prev_page %>
+            <li class="page-item">
+              <%= link_to_prev_page @requests, 'Previous', class: 'page-link' %>
+            </li>
+          <% else %>
+            <li class="page-item disabled">
+              <span class="page-link">Previous</span>
+            </li>
+          <% end %>
+          
+          <% @requests.total_pages.times do |i| %>
+            <% page = i + 1 %>
+            <li class="page-item <%= 'active' if page == @requests.current_page %>">
+              <%= link_to page, requests_path(page: page, status: params[:status], user_id: params[:user_id], assigned_rep_id: params[:assigned_rep_id], start_date: params[:start_date], end_date: params[:end_date]), class: 'page-link' %>
+            </li>
+          <% end %>
+          
+          <% if @requests.next_page %>
+            <li class="page-item">
+              <%= link_to_next_page @requests, 'Next', class: 'page-link' %>
+            </li>
+          <% else %>
+            <li class="page-item disabled">
+              <span class="page-link">Next</span>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,188 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">Request Tires</h4>
+        </div>
+        <div class="card-body">
+          <%= form_for @request do |f| %>
+            <% if @request.errors.any? %>
+              <div class="alert alert-danger">
+                <h5>Please fix the following errors:</h5>
+                <ul>
+                  <% @request.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="mb-4">
+              <h5>Select Product</h5>
+              <div class="row">
+                <% @products.each do |product| %>
+                  <div class="col-md-6 mb-3">
+                    <div class="card h-100 <%= 'border-primary' if @request.product_id == product.id %>">
+                      <div class="card-body">
+                        <div class="form-check">
+                          <%= f.radio_button :product_id, product.id, class: 'form-check-input', required: true %>
+                          <%= f.label "product_id_#{product.id}", class: 'form-check-label w-100' do %>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <strong><%= product.name %></strong>
+                              <span class="badge bg-info">$<%= product.price %></span>
+                            </div>
+                            <p class="text-muted small mb-0 mt-2"><%= product.description %></p>
+                          <% end %>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h5>Quantity</h5>
+              <div class="row">
+                <div class="col-md-4">
+                  <%= f.select :quantity, options_for_select((1..8).map { |i| [i, i] }, @request.quantity), {}, { class: 'form-select', required: true } %>
+                  <div class="form-text">Select the number of tires you need</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h5>Shipping Information</h5>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <%= f.label :shipping_name, "Full Name", class: 'form-label' %>
+                  <%= f.text_field :shipping_name, class: 'form-control', required: true %>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <%= f.label :shipping_phone, "Phone Number", class: 'form-label' %>
+                  <%= f.telephone_field :shipping_phone, class: 'form-control', required: true %>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <%= f.label :shipping_address, "Street Address", class: 'form-label' %>
+                  <%= f.text_field :shipping_address, class: 'form-control', required: true %>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <%= f.label :shipping_city, "City", class: 'form-label' %>
+                  <%= f.text_field :shipping_city, class: 'form-control', required: true %>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <%= f.label :shipping_state, "State", class: 'form-label' %>
+                  <%= f.select :shipping_state, options_for_select(us_states, @request.shipping_state), { include_blank: "Select State" }, { class: 'form-select', required: true } %>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <%= f.label :shipping_zip, "ZIP Code", class: 'form-label' %>
+                  <%= f.text_field :shipping_zip, class: 'form-control', required: true %>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h5>Payment Method</h5>
+              <div class="row">
+                <% if @points && @points.available >= 4 %>
+                  <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <div class="form-check">
+                          <%= f.radio_button :payment_type, 'points', class: 'form-check-input', required: true %>
+                          <%= f.label :payment_type_points, class: 'form-check-label w-100' do %>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <strong>Points</strong>
+                              <span class="badge bg-success"><%= @points.available %> available</span>
+                            </div>
+                            <p class="text-muted small mb-0 mt-2">Use your accumulated points (4 points = 1 tire)</p>
+                          <% end %>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+                
+                <div class="col-md-4 mb-3">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="form-check">
+                        <%= f.radio_button :payment_type, 'credit_card', class: 'form-check-input', required: true %>
+                        <%= f.label :payment_type_credit_card, class: 'form-check-label w-100' do %>
+                          <div class="d-flex justify-content-between align-items-center">
+                            <strong>Credit Card</strong>
+                            <i class="far fa-credit-card"></i>
+                          </div>
+                          <p class="text-muted small mb-0 mt-2">Pay with Visa, Mastercard, or American Express</p>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="form-check">
+                        <%= f.radio_button :payment_type, 'paypal', class: 'form-check-input', required: true %>
+                        <%= f.label :payment_type_paypal, class: 'form-check-label w-100' do %>
+                          <div class="d-flex justify-content-between align-items-center">
+                            <strong>PayPal</strong>
+                            <i class="fab fa-paypal"></i>
+                          </div>
+                          <p class="text-muted small mb-0 mt-2">Pay securely with your PayPal account</p>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h5>Additional Notes</h5>
+              <div class="row">
+                <div class="col-md-12">
+                  <%= f.text_area :notes, class: 'form-control', rows: 3, placeholder: "Any special instructions or information for this order..." %>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <%= link_to "Cancel", dashboard_path, class: "btn btn-outline-secondary" %>
+              <%= f.submit "Submit Request", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :javascript do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add any client-side validation or interactive features here
+      const paymentTypeRadios = document.querySelectorAll('input[name="request[payment_type]"]');
+      const productRadios = document.querySelectorAll('input[name="request[product_id]"]');
+      const quantitySelect = document.querySelector('select[name="request[quantity]"]');
+      
+      // Function to update product cards when selected
+      productRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          document.querySelectorAll('.card').forEach(card => {
+            card.classList.remove('border-primary');
+          });
+          this.closest('.card').classList.add('border-primary');
+        });
+      });
+      
+      // Add any additional interactive features here
+    });
+  </script>
+<% end %>

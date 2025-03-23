@@ -1,0 +1,303 @@
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2>Points Management</h2>
+      <p class="text-muted">Manage participant points for tire redemptions</p>
+    </div>
+    <div class="col-md-4 text-end">
+      <%= link_to dashboard_path, class: "btn btn-outline-secondary" do %>
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Points Overview Card -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Points Overview</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-3">
+              <div class="p-3">
+                <h3 class="text-primary"><%= @total_points %></h3>
+                <p class="mb-0">Total Points</p>
+                <small class="text-muted">across all participants</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h3 class="text-success"><%= @available_points %></h3>
+                <p class="mb-0">Available Points</p>
+                <small class="text-muted">ready for redemption</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h3 class="text-warning"><%= @pending_points %></h3>
+                <p class="mb-0">Pending Points</p>
+                <small class="text-muted">in submitted requests</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h3 class="text-secondary"><%= @redeemed_points %></h3>
+                <p class="mb-0">Redeemed Points</p>
+                <small class="text-muted">used in fulfilled requests</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Points Card -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Add Points to Participant</h5>
+        </div>
+        <div class="card-body">
+          <%= form_with(url: add_points_path, method: :post) do |f| %>
+            <div class="mb-3">
+              <label class="form-label">Select Participant</label>
+              <%= f.select :user_id, 
+                options_for_select(User.find_all_by_role('participant')
+                  .select { |u| u.approved? }
+                  .map { |u| ["#{u.display_name} (#{u.email})", u.id] }, 
+                params[:user_id]), 
+                { include_blank: "Select a participant" }, 
+                { class: 'form-select', required: true } 
+              %>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Points to Add</label>
+              <div class="input-group">
+                <%= f.number_field :amount, class: 'form-control', min: 1, required: true %>
+                <span class="input-group-text">points</span>
+              </div>
+              <div class="form-text">4 points = 1 tire</div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Reason</label>
+              <%= f.text_field :reason, class: 'form-control', placeholder: 'e.g., Race participation, Event bonus, etc.', required: true %>
+            </div>
+            
+            <div class="d-grid">
+              <%= f.submit "Add Points", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Bulk Add Points</h5>
+        </div>
+        <div class="card-body">
+          <%= form_with(url: bulk_add_points_path, method: :post) do |f| %>
+            <div class="mb-3">
+              <label class="form-label">Select Participants</label>
+              <%= f.select :user_ids, 
+                options_for_select(User.find_all_by_role('participant')
+                  .select { |u| u.approved? }
+                  .map { |u| ["#{u.display_name} (#{u.email})", u.id] }), 
+                {}, 
+                { class: 'form-select', multiple: true, size: 6, required: true } 
+              %>
+              <div class="form-text">Hold Ctrl/Cmd to select multiple participants</div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Points to Add to Each</label>
+              <div class="input-group">
+                <%= f.number_field :amount, class: 'form-control', min: 1, required: true %>
+                <span class="input-group-text">points per participant</span>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Reason</label>
+              <%= f.text_field :reason, class: 'form-control', placeholder: 'e.g., Monthly allocation, Event participation, etc.', required: true %>
+            </div>
+            
+            <div class="d-grid">
+              <%= f.submit "Add Points to Selected Participants", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Participant Points Table -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Participant Points</h5>
+      
+      <div class="input-group" style="max-width: 300px;">
+        <%= form_with(url: points_path, method: :get) do |f| %>
+          <%= f.text_field :search, value: params[:search], class: 'form-control', placeholder: 'Search by name or email' %>
+          <button class="btn btn-outline-secondary" type="submit">
+            <i class="fas fa-search"></i>
+          </button>
+        <% end %>
+      </div>
+    </div>
+    
+    <div class="card-body p-0">
+      <% if @participants.empty? %>
+        <div class="p-4 text-center">
+          <p class="text-muted mb-0">No participants found.</p>
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Participant</th>
+                <th>Email</th>
+                <th class="text-center">Available Points</th>
+                <th class="text-center">Pending Points</th>
+                <th class="text-center">Redeemed Points</th>
+                <th class="text-center">Total Points</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @participants.each do |participant| %>
+                <% points = Points.find_by_user_id(participant.id) %>
+                <tr>
+                  <td><%= participant.display_name %></td>
+                  <td><%= participant.email %></td>
+                  <td class="text-center">
+                    <span class="badge bg-success"><%= points.available %></span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-warning text-dark"><%= points.pending %></span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-secondary"><%= points.redeemed %></span>
+                  </td>
+                  <td class="text-center">
+                    <strong><%= points.total %></strong>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <%= link_to participant_points_path(participant.id), class: "btn btn-outline-primary" do %>
+                        <i class="fas fa-history"></i> History
+                      <% end %>
+                      
+                      <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addPointsModal" data-user-id="<%= participant.id %>" data-user-name="<%= participant.display_name %>">
+                        <i class="fas fa-plus"></i> Add
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if @participants.respond_to?(:total_pages) && @participants.total_pages > 1 %>
+    <div class="d-flex justify-content-center mt-4">
+      <nav aria-label="Page navigation">
+        <ul class="pagination">
+          <% if @participants.prev_page %>
+            <li class="page-item">
+              <%= link_to_prev_page @participants, 'Previous', class: 'page-link' %>
+            </li>
+          <% else %>
+            <li class="page-item disabled">
+              <span class="page-link">Previous</span>
+            </li>
+          <% end %>
+          
+          <% @participants.total_pages.times do |i| %>
+            <% page = i + 1 %>
+            <li class="page-item <%= 'active' if page == @participants.current_page %>">
+              <%= link_to page, points_path(page: page, search: params[:search]), class: 'page-link' %>
+            </li>
+          <% end %>
+          
+          <% if @participants.next_page %>
+            <li class="page-item">
+              <%= link_to_next_page @participants, 'Next', class: 'page-link' %>
+            </li>
+          <% else %>
+            <li class="page-item disabled">
+              <span class="page-link">Next</span>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+    </div>
+  <% end %>
+</div>
+
+<!-- Add Points Modal -->
+<div class="modal fade" id="addPointsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Points</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <%= form_with(url: add_points_path, method: :post) do |f| %>
+        <div class="modal-body">
+          <p>Adding points to <strong id="participant-name"></strong></p>
+          <%= f.hidden_field :user_id, id: 'modal-user-id' %>
+          
+          <div class="mb-3">
+            <label class="form-label">Points to Add</label>
+            <div class="input-group">
+              <%= f.number_field :amount, class: 'form-control', min: 1, required: true %>
+              <span class="input-group-text">points</span>
+            </div>
+            <div class="form-text">4 points = 1 tire</div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <%= f.text_field :reason, class: 'form-control', placeholder: 'e.g., Race participation, Event bonus, etc.', required: true %>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= f.submit "Add Points", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :javascript do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle modal data
+      const addPointsModal = document.getElementById('addPointsModal');
+      if (addPointsModal) {
+        addPointsModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget;
+          const userId = button.getAttribute('data-user-id');
+          const userName = button.getAttribute('data-user-name');
+          
+          document.getElementById('modal-user-id').value = userId;
+          document.getElementById('participant-name').textContent = userName;
+        });
+      }
+    });
+  </script>
+<% end %>

@@ -1,0 +1,59 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-8 offset-md-2 text-center">
+      <div class="card shadow">
+        <div class="card-body">
+          <h2 class="card-title">
+            <i class="fas fa-clock text-warning"></i> Account Pending Approval
+          </h2>
+          
+          <div class="my-4">
+            <div class="alert alert-info">
+              <p class="mb-0">
+                Your account registration has been received and is waiting for administrator approval.
+              </p>
+            </div>
+            
+            <p class="mt-3">
+              You'll receive an email notification once your account has been approved.
+              This typically takes 1-2 business days.
+            </p>
+          </div>
+          
+          <div class="card bg-light mb-4">
+            <div class="card-body">
+              <h5 class="card-title">Your Registration Details</h5>
+              <table class="table table-borderless">
+                <tr>
+                  <th class="text-end">Name:</th>
+                  <td class="text-start"><%= @user.display_name %></td>
+                </tr>
+                <tr>
+                  <th class="text-end">Email:</th>
+                  <td class="text-start"><%= @user.email %></td>
+                </tr>
+                <tr>
+                  <th class="text-end">Role:</th>
+                  <td class="text-start"><%= @user.role.capitalize %></td>
+                </tr>
+                <tr>
+                  <th class="text-end">Status:</th>
+                  <td class="text-start">
+                    <span class="badge bg-warning text-dark">Pending</span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          
+          <p>
+            If you have any questions or need immediate assistance, please contact the administrator.
+          </p>
+          
+          <%= link_to "Return to Home", root_path, class: "btn btn-primary" %>
+          <%= link_to "Sign Out", signout_path, class: "btn btn-outline-secondary ms-2" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

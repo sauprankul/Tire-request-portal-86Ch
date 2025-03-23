@@ -1,0 +1,392 @@
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2><%= @product.name %></h2>
+      <p class="text-muted"><%= @product.size %> - <%= @product.category.titleize %></p>
+    </div>
+    <div class="col-md-4 text-end">
+      <% if current_user.admin? %>
+        <%= link_to edit_product_path(@product), class: "btn btn-primary me-2" do %>
+          <i class="fas fa-edit"></i> Edit
+        <% end %>
+      <% end %>
+      <%= link_to products_path, class: "btn btn-outline-secondary" do %>
+        <i class="fas fa-arrow-left"></i> Back to Products
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Product Details Card -->
+    <div class="col-md-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Product Details</h5>
+          <span class="badge <%= product_availability_badge_class(@product.availability) %>">
+            <%= @product.availability.titleize %>
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <dl>
+                <dt>Product Name</dt>
+                <dd><%= @product.name %></dd>
+                
+                <dt>Size</dt>
+                <dd><%= @product.size %></dd>
+                
+                <dt>Category</dt>
+                <dd><span class="badge bg-secondary"><%= @product.category.titleize %></span></dd>
+                
+                <dt>Description</dt>
+                <dd><%= @product.description.present? ? @product.description : "No description provided" %></dd>
+              </dl>
+            </div>
+            
+            <div class="col-md-6">
+              <dl>
+                <dt>Points Required</dt>
+                <dd><strong><%= @product.points_required %> points</strong> (<%= @product.points_required / 4 %> tires)</dd>
+                
+                <dt>Cash Price</dt>
+                <dd><strong>$<%= sprintf('%.2f', @product.cash_price) %></strong> per tire</dd>
+                
+                <dt>Status</dt>
+                <dd>
+                  <% if @product.active? %>
+                    <span class="badge bg-success">Active</span>
+                  <% else %>
+                    <span class="badge bg-danger">Inactive</span>
+                  <% end %>
+                </dd>
+                
+                <dt>Created</dt>
+                <dd><%= @product.created_at.strftime("%B %d, %Y") %></dd>
+                
+                <dt>Last Updated</dt>
+                <dd><%= @product.updated_at.strftime("%B %d, %Y") %></dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stock History Card (Admin Only) -->
+      <% if current_user.admin? %>
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">Stock History</h5>
+          </div>
+          <div class="card-body p-0">
+            <% if @stock_history.empty? %>
+              <div class="p-4 text-center">
+                <p class="text-muted mb-0">No stock history available.</p>
+              </div>
+            <% else %>
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Action</th>
+                      <th>Quantity</th>
+                      <th>Previous Level</th>
+                      <th>New Level</th>
+                      <th>Admin</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @stock_history.each do |history| %>
+                      <tr>
+                        <td><%= history.created_at.strftime("%b %d, %Y %I:%M %p") %></td>
+                        <td>
+                          <% case history.action 
+                             when 'add' %>
+                            <span class="badge bg-success">Added</span>
+                          <% when 'remove' %>
+                            <span class="badge bg-warning text-dark">Removed</span>
+                          <% when 'set' %>
+                            <span class="badge bg-info">Set</span>
+                          <% end %>
+                        </td>
+                        <td>
+                          <% if history.action == 'add' %>
+                            <span class="text-success">+<%= history.quantity %></span>
+                          <% elsif history.action == 'remove' %>
+                            <span class="text-danger">-<%= history.quantity %></span>
+                          <% else %>
+                            <span><%= history.quantity %></span>
+                          <% end %>
+                        </td>
+                        <td><%= history.previous_level %></td>
+                        <td><%= history.new_level %></td>
+                        <td><%= User.find(history.admin_id).display_name %></td>
+                        <td><%= history.reason %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Request History Card (Admin Only) -->
+      <% if current_user.admin? %>
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">Request History</h5>
+          </div>
+          <div class="card-body p-0">
+            <% if @request_history.empty? %>
+              <div class="p-4 text-center">
+                <p class="text-muted mb-0">No requests found for this product.</p>
+              </div>
+            <% else %>
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Request ID</th>
+                      <th>Participant</th>
+                      <th>Quantity</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @request_history.each do |request| %>
+                      <tr>
+                        <td><%= request.created_at.strftime("%b %d, %Y") %></td>
+                        <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                        <td><%= User.find(request.user_id).display_name %></td>
+                        <td><%= request.quantity %> tires</td>
+                        <td>
+                          <% if request.payment_type == 'points' %>
+                            <span class="badge bg-primary">Points</span>
+                          <% else %>
+                            <span class="badge bg-success">Cash</span>
+                          <% end %>
+                        </td>
+                        <td>
+                          <% case request.status 
+                             when 'SUBMITTED' %>
+                            <span class="badge bg-secondary">Submitted</span>
+                          <% when 'AWAITING_PAYMENT' %>
+                            <span class="badge bg-warning text-dark">Awaiting Payment</span>
+                          <% when 'PAID' %>
+                            <span class="badge bg-info">Paid</span>
+                          <% when 'SHIPPED' %>
+                            <span class="badge bg-primary">Shipped</span>
+                          <% when 'RECEIVED' %>
+                            <span class="badge bg-success">Received</span>
+                          <% when 'BACKORDERED' %>
+                            <span class="badge bg-danger">Backordered</span>
+                          <% when 'CANCELED' %>
+                            <span class="badge bg-danger">Canceled</span>
+                          <% end %>
+                        </td>
+                        <td>
+                          <%= link_to request_path(request), class: "btn btn-sm btn-outline-primary" do %>
+                            <i class="fas fa-eye"></i> View
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Stock and Actions Card -->
+    <div class="col-md-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Stock Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="text-center mb-4">
+            <div class="display-4 mb-2">
+              <%= @product.stock_level %>
+            </div>
+            <p class="text-muted mb-0">tires in stock</p>
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label">Stock Level</label>
+            <div class="progress" style="height: 20px;">
+              <div class="progress-bar <%= product_stock_progress_class(@product.stock_level, @product.low_stock_threshold) %>" 
+                   role="progressbar" 
+                   style="width: <%= product_stock_percentage(@product.stock_level, @product.max_stock) %>%;" 
+                   aria-valuenow="<%= @product.stock_level %>" 
+                   aria-valuemin="0" 
+                   aria-valuemax="<%= @product.max_stock %>">
+                <%= @product.stock_level %> / <%= @product.max_stock %>
+              </div>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <small>0</small>
+              <small>Low: < <%= @product.low_stock_threshold %></small>
+              <small><%= @product.max_stock %></small>
+            </div>
+          </div>
+          
+          <% if current_user.admin? %>
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStockModal">
+                <i class="fas fa-boxes me-2"></i> Update Stock
+              </button>
+              
+              <% if @product.active? %>
+                <%= link_to deactivate_product_path(@product), method: :patch, data: { confirm: "Are you sure you want to deactivate this product?" }, class: "btn btn-outline-warning" do %>
+                  <i class="fas fa-ban me-2"></i> Deactivate Product
+                <% end %>
+              <% else %>
+                <%= link_to activate_product_path(@product), method: :patch, class: "btn btn-outline-success" do %>
+                  <i class="fas fa-check me-2"></i> Activate Product
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Request This Product Card (Participant Only) -->
+      <% if current_user.participant? && @product.active? && @product.stock_level > 0 %>
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">Request This Product</h5>
+          </div>
+          <div class="card-body">
+            <p>You can request this product using points or cash payment.</p>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Points Option:</span>
+                <span class="badge bg-primary"><%= @product.points_required %> points</span>
+              </div>
+              <div class="progress mb-2" style="height: 10px;">
+                <div class="progress-bar bg-primary" 
+                     role="progressbar" 
+                     style="width: <%= [@points.available / @product.points_required.to_f * 100, 100].min %>%;" 
+                     aria-valuenow="<%= @points.available %>" 
+                     aria-valuemin="0" 
+                     aria-valuemax="<%= @product.points_required %>">
+                </div>
+              </div>
+              <div class="d-flex justify-content-between">
+                <small>Your points: <%= @points.available %></small>
+                <small>
+                  <% if @points.available >= @product.points_required %>
+                    <span class="text-success">Sufficient points</span>
+                  <% else %>
+                    <span class="text-danger">Insufficient points</span>
+                  <% end %>
+                </small>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Cash Option:</span>
+                <span class="badge bg-success">$<%= sprintf('%.2f', @product.cash_price) %> per tire</span>
+              </div>
+              <p class="small text-muted mb-0">Cash payment will be collected after approval.</p>
+            </div>
+            
+            <div class="d-grid">
+              <%= link_to new_request_path(product_id: @product.id), class: "btn btn-primary" do %>
+                <i class="fas fa-shopping-cart me-2"></i> Request This Product
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Update Stock Modal (Admin Only) -->
+<% if current_user.admin? %>
+  <div class="modal fade" id="updateStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Update Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <%= form_with(url: update_stock_product_path(@product), method: :patch) do |f| %>
+          <div class="modal-body">
+            <p>Updating stock for <strong><%= @product.name %></strong></p>
+            
+            <div class="mb-3">
+              <label class="form-label">Current Stock Level</label>
+              <input type="text" class="form-control" value="<%= @product.stock_level %>" disabled>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Action</label>
+              <%= f.select :action, 
+                options_for_select([
+                  ["Add to Stock", "add"],
+                  ["Remove from Stock", "remove"],
+                  ["Set Exact Stock Level", "set"]
+                ]),
+                {}, { class: "form-select", id: "stock-action" }
+              %>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label" id="quantity-label">Quantity to Add</label>
+              <%= f.number_field :quantity, min: 1, class: "form-control", required: true %>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Reason</label>
+              <%= f.text_field :reason, class: "form-control", placeholder: "e.g., New shipment, Inventory correction, etc.", required: true %>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <%= f.submit "Update Stock", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<% content_for :javascript do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Update quantity label based on action selection
+      const stockAction = document.getElementById('stock-action');
+      const quantityLabel = document.getElementById('quantity-label');
+      
+      if (stockAction && quantityLabel) {
+        stockAction.addEventListener('change', function() {
+          switch(this.value) {
+            case 'add':
+              quantityLabel.textContent = 'Quantity to Add';
+              break;
+            case 'remove':
+              quantityLabel.textContent = 'Quantity to Remove';
+              break;
+            case 'set':
+              quantityLabel.textContent = 'Set Stock Level To';
+              break;
+          }
+        });
+      }
+    });
+  </script>
+<% end %>

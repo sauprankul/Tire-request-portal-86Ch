@@ -1,0 +1,18 @@
+default: &default
+  project_id: tire-request-portal
+  emulator_host: localhost
+  auth_emulator_port: 9099
+  firestore_emulator_port: 8080
+  functions_emulator_port: 5001
+
+development:
+  <<: *default
+  use_emulator: true
+
+test:
+  <<: *default
+  use_emulator: true
+
+production:
+  <<: *default
+  use_emulator: false

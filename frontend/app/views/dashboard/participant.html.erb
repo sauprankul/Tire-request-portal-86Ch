@@ -1,0 +1,210 @@
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2>Participant Dashboard</h2>
+      <p class="text-muted">Welcome back, <%= current_user.display_name %>!</p>
+    </div>
+    <div class="col-md-4 text-end">
+      <%= link_to new_request_path, class: "btn btn-primary btn-lg" do %>
+        <i class="fas fa-plus-circle"></i> Request Tires
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Points Summary Card -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Your Points Summary</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-4">
+              <div class="p-3">
+                <h3 class="text-success"><%= @points.available %></h3>
+                <p class="mb-0">Available Points</p>
+                <small class="text-muted">(<%= @points.tires_available %> tires)</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3">
+                <h3 class="text-warning"><%= @points.pending %></h3>
+                <p class="mb-0">Pending Points</p>
+                <small class="text-muted">(in submitted requests)</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3">
+                <h3 class="text-secondary"><%= @points.redeemed %></h3>
+                <p class="mb-0">Redeemed Points</p>
+                <small class="text-muted">(used in fulfilled requests)</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">Total Points: <%= @points.total %></span>
+            <small class="text-muted">4 points = 1 tire</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Requests -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h4>Active Requests</h4>
+      
+      <% active_requests = @requests.select { |r| ['SUBMITTED', 'AWAITING_PAYMENT', 'PAID', 'SHIPPED', 'BACKORDERED'].include?(r.status) } %>
+      
+      <% if active_requests.empty? %>
+        <div class="alert alert-info">
+          You don't have any active requests. <%= link_to "Request tires now", new_request_path %>.
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Payment</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% active_requests.each do |request| %>
+                <tr>
+                  <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                  <td><%= Product.find(request.product_id).name %></td>
+                  <td><%= request.quantity %></td>
+                  <td>
+                    <% if request.payment_type == 'points' %>
+                      <span class="badge bg-success">Points</span>
+                    <% elsif request.payment_type == 'paypal' %>
+                      <span class="badge bg-primary">PayPal</span>
+                    <% else %>
+                      <span class="badge bg-info">Credit Card</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% case request.status 
+                       when 'SUBMITTED' %>
+                      <span class="badge bg-secondary">Submitted</span>
+                    <% when 'AWAITING_PAYMENT' %>
+                      <span class="badge bg-warning text-dark">Awaiting Payment</span>
+                    <% when 'PAID' %>
+                      <span class="badge bg-info">Paid</span>
+                    <% when 'SHIPPED' %>
+                      <span class="badge bg-primary">Shipped</span>
+                    <% when 'BACKORDERED' %>
+                      <span class="badge bg-danger">Backordered</span>
+                    <% end %>
+                  </td>
+                  <td><%= time_ago_in_words(request.updated_at) %> ago</td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <%= link_to request_path(request), class: "btn btn-outline-primary" do %>
+                        <i class="fas fa-eye"></i> View
+                      <% end %>
+                      
+                      <% if request.status == 'SUBMITTED' %>
+                        <%= button_to withdraw_request_path(request), method: :post, class: "btn btn-outline-danger ms-1", data: { confirm: "Are you sure you want to withdraw this request?" } do %>
+                          <i class="fas fa-times"></i> Withdraw
+                        <% end %>
+                      <% elsif request.status == 'AWAITING_PAYMENT' %>
+                        <%= button_to mark_paid_request_path(request), method: :post, class: "btn btn-outline-success ms-1" do %>
+                          <i class="fas fa-check"></i> Mark Paid
+                        <% end %>
+                      <% elsif request.status == 'SHIPPED' %>
+                        <%= button_to mark_received_request_path(request), method: :post, class: "btn btn-outline-success ms-1" do %>
+                          <i class="fas fa-box-check"></i> Received
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Completed Requests -->
+  <div class="row">
+    <div class="col-md-12">
+      <h4>Completed Requests</h4>
+      
+      <% completed_requests = @requests.select { |r| ['RECEIVED', 'CANCELED'].include?(r.status) }.first(5) %>
+      
+      <% if completed_requests.empty? %>
+        <div class="alert alert-info">
+          You don't have any completed requests.
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Payment</th>
+                <th>Status</th>
+                <th>Completed</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% completed_requests.each do |request| %>
+                <tr>
+                  <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
+                  <td><%= Product.find(request.product_id).name %></td>
+                  <td><%= request.quantity %></td>
+                  <td>
+                    <% if request.payment_type == 'points' %>
+                      <span class="badge bg-success">Points</span>
+                    <% elsif request.payment_type == 'paypal' %>
+                      <span class="badge bg-primary">PayPal</span>
+                    <% else %>
+                      <span class="badge bg-info">Credit Card</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if request.status == 'RECEIVED' %>
+                      <span class="badge bg-success">Received</span>
+                    <% else %>
+                      <span class="badge bg-danger">Canceled</span>
+                    <% end %>
+                  </td>
+                  <td><%= request.received_date&.strftime("%b %d, %Y") || request.updated_at.strftime("%b %d, %Y") %></td>
+                  <td>
+                    <%= link_to request_path(request), class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="fas fa-eye"></i> View
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        
+        <% if @requests.select { |r| ['RECEIVED', 'CANCELED'].include?(r.status) }.count > 5 %>
+          <div class="text-center mt-3">
+            <%= link_to requests_path, class: "btn btn-outline-secondary" do %>
+              View All Requests <i class="fas fa-arrow-right"></i>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

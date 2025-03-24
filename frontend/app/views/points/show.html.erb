@@ -2,9 +2,15 @@
   <div class="row mb-4">
     <div class="col-md-8">
       <h2>Points History</h2>
-      <p class="text-muted">
-        Viewing points history for <%= @user.display_name %> (<%= @user.email %>)
-      </p>
+      <% if @user %>
+        <p class="text-muted">
+          Viewing points history for <%= @user.display_name %> (<%= @user.email %>)
+        </p>
+      <% else %>
+        <p class="text-muted">
+          User information not available
+        </p>
+      <% end %>
     </div>
     <div class="col-md-4 text-end">
       <%= link_to points_path, class: "btn btn-outline-secondary" do %>
@@ -24,28 +30,28 @@
           <div class="row text-center">
             <div class="col-md-3">
               <div class="p-3">
-                <h3 class="text-success"><%= @points.available %></h3>
+                <h3 class="text-success"><%= @points.available if @points %></h3>
                 <p class="mb-0">Available Points</p>
-                <small class="text-muted">(<%= @points.tires_available %> tires)</small>
+                <small class="text-muted">(<%= @points.tires_available if @points %> tires)</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="p-3">
-                <h3 class="text-warning"><%= @points.pending %></h3>
+                <h3 class="text-warning"><%= @points.pending if @points %></h3>
                 <p class="mb-0">Pending Points</p>
                 <small class="text-muted">(in submitted requests)</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="p-3">
-                <h3 class="text-secondary"><%= @points.redeemed %></h3>
+                <h3 class="text-secondary"><%= @points.redeemed if @points %></h3>
                 <p class="mb-0">Redeemed Points</p>
                 <small class="text-muted">(used in fulfilled requests)</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="p-3">
-                <h3 class="text-primary"><%= @points.total %></h3>
+                <h3 class="text-primary"><%= @points.total if @points %></h3>
                 <p class="mb-0">Total Points</p>
                 <small class="text-muted">(lifetime)</small>
               </div>
@@ -57,7 +63,7 @@
   </div>
 
   <!-- Add Points Card -->
-  <% if current_user.admin? %>
+  <% if current_user.admin? && @user %>
     <div class="row mb-4">
       <div class="col-md-12">
         <div class="card shadow-sm">
@@ -98,13 +104,13 @@
       <h5 class="mb-0">Points Transactions</h5>
       
       <div class="btn-group btn-group-sm">
-        <%= link_to participant_points_path(@user.id, filter: 'all'), class: "btn btn-outline-secondary #{params[:filter] != 'added' && params[:filter] != 'redeemed' ? 'active' : ''}" do %>
+        <%= link_to participant_points_path(@user.id, filter: 'all') if @user, class: "btn btn-outline-secondary #{params[:filter] != 'added' && params[:filter] != 'redeemed' ? 'active' : ''}" do %>
           All Transactions
         <% end %>
-        <%= link_to participant_points_path(@user.id, filter: 'added'), class: "btn btn-outline-success #{params[:filter] == 'added' ? 'active' : ''}" do %>
+        <%= link_to participant_points_path(@user.id, filter: 'added') if @user, class: "btn btn-outline-success #{params[:filter] == 'added' ? 'active' : ''}" do %>
           Points Added
         <% end %>
-        <%= link_to participant_points_path(@user.id, filter: 'redeemed'), class: "btn btn-outline-warning #{params[:filter] == 'redeemed' ? 'active' : ''}" do %>
+        <%= link_to participant_points_path(@user.id, filter: 'redeemed') if @user, class: "btn btn-outline-warning #{params[:filter] == 'redeemed' ? 'active' : ''}" do %>
           Points Redeemed
         <% end %>
       </div>
@@ -161,7 +167,7 @@
                   <td><%= transaction.balance_after %></td>
                   <td>
                     <% if transaction.admin_id %>
-                      <%= User.find(transaction.admin_id).display_name %>
+                      <%= User.find(transaction.admin_id).display_name if User.find(transaction.admin_id) %>
                     <% else %>
                       <span class="text-muted">System</span>
                     <% end %>
@@ -193,7 +199,7 @@
           <% @transactions.total_pages.times do |i| %>
             <% page = i + 1 %>
             <li class="page-item <%= 'active' if page == @transactions.current_page %>">
-              <%= link_to page, participant_points_path(@user.id, page: page, filter: params[:filter]), class: 'page-link' %>
+              <%= link_to page, participant_points_path(@user.id, page: page, filter: params[:filter]) if @user, class: 'page-link' %>
             </li>
           <% end %>
           
@@ -219,13 +225,14 @@
           <h5 class="mb-0">Tire Redemption History</h5>
         </div>
         <div class="card-body p-0">
-          <% redemption_requests = Request.find_all_by_user_id(@user.id).select { |r| r.payment_type == 'points' } %>
+          <% redemption_requests = Request.find_all_by_user_id(@user.id) if @user %>
+          <% redemption_requests = redemption_requests.select { |r| r.payment_type == 'points' } if redemption_requests %>
           
-          <% if redemption_requests.empty? %>
+          <% if redemption_requests && redemption_requests.empty? %>
             <div class="p-4 text-center">
               <p class="text-muted mb-0">No tire redemptions found.</p>
             </div>
-          <% else %>
+          <% elsif redemption_requests %>
             <div class="table-responsive">
               <table class="table table-hover mb-0">
                 <thead class="table-light">

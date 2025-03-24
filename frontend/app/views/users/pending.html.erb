@@ -23,26 +23,57 @@
           <div class="card bg-light mb-4">
             <div class="card-body">
               <h5 class="card-title">Your Registration Details</h5>
-              <table class="table table-borderless">
-                <tr>
-                  <th class="text-end">Name:</th>
-                  <td class="text-start"><%= @user.display_name %></td>
-                </tr>
-                <tr>
-                  <th class="text-end">Email:</th>
-                  <td class="text-start"><%= @user.email %></td>
-                </tr>
-                <tr>
-                  <th class="text-end">Role:</th>
-                  <td class="text-start"><%= @user.role.capitalize %></td>
-                </tr>
-                <tr>
-                  <th class="text-end">Status:</th>
-                  <td class="text-start">
-                    <span class="badge bg-warning text-dark">Pending</span>
-                  </td>
-                </tr>
-              </table>
+              <% if @user %>
+                <table class="table table-borderless">
+                  <tr>
+                    <th class="text-end">UID:</th>
+                    <td class="text-start"><%= @user.uid %></td>
+                  </tr>
+                  <tr>
+                    <th class="text-end">Name:</th>
+                    <td class="text-start"><%= @user.display_name %></td>
+                  </tr>
+                  <tr>
+                    <th class="text-end">Email:</th>
+                    <td class="text-start"><%= @user.email %></td>
+                  </tr>
+                  <tr>
+                    <th class="text-end">Role:</th>
+                    <td class="text-start"><%= @user.role&.capitalize %></td>
+                  </tr>
+                  <tr>
+                    <th class="text-end">Status:</th>
+                    <td class="text-start">
+                      <span class="badge bg-warning text-dark">Pending</span>
+                    </td>
+                  </tr>
+                </table>
+              <% else %>
+                <div class="alert alert-warning">
+                  User information is not available. Please try signing in again.
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+          <!-- Debug Information -->
+          <div class="card bg-dark text-light mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Debug Information</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <h6>Session User UID</h6>
+                <pre class="text-start"><%= session[:user_uid].inspect %></pre>
+              </div>
+              <div class="mb-3">
+                <h6>User Object</h6>
+                <pre class="text-start"><%= @user.inspect %></pre>
+              </div>
+              <div>
+                <h6>Debug Info</h6>
+                <pre class="text-start" style="max-height: 400px; overflow-y: auto;"><%= JSON.pretty_generate(@debug_info) %></pre>
+              </div>
             </div>
           </div>
           

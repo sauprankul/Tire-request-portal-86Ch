@@ -19,7 +19,11 @@ class UsersController < ApplicationController
     # Ensure we have auth data from Google Sign-In
     redirect_to root_path, alert: "Please sign in with Google first" unless session[:auth_data]
     
-    @user = User.new
+    # Initialize user with auth data
+    @user = User.new(
+      email: session[:auth_data][:email],
+      display_name: session[:auth_data][:display_name]
+    )
   end
 
   def create
@@ -36,8 +40,8 @@ class UsersController < ApplicationController
     # Create the user
     @user = User.new(
       uid: auth_data[:uid],
-      email: auth_data[:email],
-      display_name: auth_data[:display_name],
+      email: params[:user][:email],
+      display_name: params[:user][:display_name],
       role: params[:user][:role],
       status: 'pending',
       created_at: Time.now,

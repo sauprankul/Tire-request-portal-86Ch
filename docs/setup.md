@@ -9,7 +9,7 @@ The Tire Request Portal is a web application for managing tire requests for the 
 - Role-based access control (Participant, Representative, Admin)
 - Tire request submission and tracking
 - Points system for tire redemption
-- Real-time updates using Firebase
+- PostgreSQL database for data storage
 
 ## Prerequisites
 
@@ -32,26 +32,35 @@ The Tire Request Portal is a web application for managing tire requests for the 
    - Download Node.js from [nodejs.org](https://nodejs.org/)
    - Install Yarn: `npm install -g yarn`
 
-### Firebase Setup
-1. Install Firebase CLI:
-   ```
-   npm install -g firebase-tools
-   ```
-
-2. Login to Firebase:
-   ```
-   firebase login
-   ```
-
-3. Initialize Firebase Emulator Suite:
-   ```
-   cd backend/firebase
-   firebase init emulators
-   ```
-   - Select Authentication, Firestore, and Functions
-   - Choose default ports or specify your own
+5. Install Docker and Docker Compose (optional, for containerized setup):
+   - Download Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop)
+   - Enable WSL 2 if prompted
 
 ## Project Setup
+
+### Option 1: Using Docker (Recommended)
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/sauprankul/Tire-request-portal-86Ch.git
+   cd tire_request_portal
+   ```
+
+2. Set up environment variables:
+   Create a `.env` file in the root directory with the following:
+   ```
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   ```
+
+3. Start the application using Docker Compose:
+   ```
+   docker-compose up -d
+   ```
+
+4. Access the application at http://localhost:3000
+
+### Option 2: Manual Setup
 
 1. Clone the repository:
    ```
@@ -72,15 +81,14 @@ The Tire Request Portal is a web application for managing tire requests for the 
    GOOGLE_CLIENT_SECRET=your_google_client_secret
    ```
 
-4. Start the Firebase emulators:
+4. Create and set up the PostgreSQL database:
    ```
-   cd ../backend/firebase
-   firebase emulators:start
+   rails db:create
+   rails db:migrate
    ```
 
-5. Start the Rails server (in a new terminal):
+5. Start the Rails server:
    ```
-   cd frontend
    rails server
    ```
 
@@ -88,28 +96,30 @@ The Tire Request Portal is a web application for managing tire requests for the 
 
 ## Project Structure
 
-### Frontend (Rails Application)
-- `app/models`: Contains model classes that interact with Firestore
+### Rails Application
+- `app/models`: Contains ActiveRecord model classes that interact with PostgreSQL
 - `app/controllers`: Contains controllers for handling HTTP requests
 - `app/views`: Contains view templates for rendering HTML
 - `config`: Contains Rails configuration files
-
-### Backend (Firebase)
-- `firebase.json`: Firebase configuration file
-- `firestore.rules`: Security rules for Firestore
-- `firestore.indexes.json`: Indexes for Firestore queries
-- `functions`: Cloud Functions for Firebase
+- `db/migrate`: Contains database migration files
 
 ## Development Workflow
 
-1. Run Firebase emulators in one terminal:
+1. Start the PostgreSQL database:
    ```
-   cd backend/firebase
-   firebase emulators:start
+   # If using Docker
+   docker-compose up -d db
+   
+   # If using local PostgreSQL
+   # Ensure your PostgreSQL service is running
    ```
 
-2. Run Rails server in another terminal:
+2. Run Rails server:
    ```
+   # If using Docker
+   docker-compose up -d web
+   
+   # If using local setup
    cd frontend
    rails server
    ```
@@ -124,6 +134,22 @@ When you first run the application, you'll need to:
 2. The first user will automatically be assigned the Admin role
 3. Use the Admin account to approve other users and assign roles
 
+## Database Schema
+
+The application uses PostgreSQL with the following key tables:
+- `users`: Stores user information including role and status
+- `points`: Tracks points for each user
+- `products`: Contains tire product information
+- `requests`: Stores tire requests with status tracking
+- `messages`: Contains communications related to requests
+- `admin_emails`: Stores pre-approved admin email addresses
+
+The schema uses PostgreSQL enum types for better data integrity:
+- `user_role`: 'participant', 'representative', 'admin'
+- `user_status`: 'pending', 'approved', 'rejected'
+- `request_payment_type`: 'paypal', 'credit_card', 'points'
+- `request_status`: 'SUBMITTED', 'AWAITING_PAYMENT', 'PAID', 'SHIPPED', 'RECEIVED', 'BACKORDERED', 'CANCELED'
+
 ## Testing
 
 To run the test suite:
@@ -135,16 +161,15 @@ rails test
 
 ## Deployment
 
-### Firebase Setup for Production
+### PostgreSQL Setup for Production
 
-1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
-2. Enable Authentication with Google as a provider
-3. Enable Firestore Database
-4. Update the Firebase configuration in `frontend/config/firebase.yml`
+1. Set up a PostgreSQL database server (e.g., AWS RDS, Google Cloud SQL)
+2. Create a database for the application
+3. Update the database configuration in `frontend/config/database.yml`
 
 ### Rails Deployment
 
-1. Set up your production database
+1. Set up your production database connection
 2. Configure your production environment variables
 3. Deploy the Rails application to your hosting provider
 
@@ -152,16 +177,17 @@ rails test
 
 ### Common Issues
 
-1. **Firebase Emulator Connection Issues**:
-   - Ensure the emulators are running before starting the Rails server
-   - Check that the ports in `frontend/config/firebase.yml` match your emulator ports
+1. **Database Connection Issues**:
+   - Ensure PostgreSQL is running and accessible
+   - Check that the database credentials in `config/database.yml` are correct
+   - Verify that the database exists and has been migrated
 
 2. **Authentication Issues**:
    - Verify your Google OAuth credentials are correct
    - Check that the callback URL is properly configured in the Google Developer Console
 
-3. **Database Issues**:
-   - Make sure Firestore emulator is running
-   - Check Firestore rules if you're getting permission errors
+3. **Asset Compilation Issues**:
+   - Run `rails assets:precompile` if you're having issues with CSS or JavaScript
+   - Check that application.js and application.css exist in the appropriate directories
 
 For more help, please open an issue on the GitHub repository.

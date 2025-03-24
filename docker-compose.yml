@@ -23,37 +23,20 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - ./frontend:/app
+      - ./frontend:/rails_app
     ports:
       - "3000:3000"
     environment:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - RAILS_ENV=development
-      - FIREBASE_AUTH_EMULATOR_HOST=firebase:9099
-      - FIRESTORE_EMULATOR_HOST=firebase:8080
       - DATABASE_URL=postgres://postgres:password@db:5432/tire_request_portal_development
     depends_on:
       db:
         condition: service_healthy
-      firebase:
-        condition: service_started
     networks:
       - tire-portal-network
     # Command removed to use the one defined in Dockerfile
-
-  firebase:
-    image: andreysenov/firebase-tools
-    volumes:
-      - ./backend/firebase:/home/node/app
-    ports:
-      - "4000:4000"  # Emulator UI
-      - "9099:9099"  # Auth
-      - "8080:8080"  # Firestore
-    working_dir: /home/node/app
-    command: firebase emulators:start --project tire-request-portal
-    networks:
-      - tire-portal-network
 
 networks:
   tire-portal-network:

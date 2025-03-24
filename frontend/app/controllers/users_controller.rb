@@ -3,13 +3,8 @@ class UsersController < ApplicationController
   before_action :authenticate_admin!, only: [:index, :approve, :reject]
 
   def index
-    # Admin view of all users
-    query = firestore_collection('users')
-    @users = query.get.map do |doc|
-      user_data = doc.data
-      user_data[:id] = doc.document_id
-      User.new(user_data)
-    end
+    # Admin view of all users - now using ActiveRecord
+    @users = User.all
   end
 
   def new
@@ -52,44 +47,43 @@ class UsersController < ApplicationController
       email: params[:user][:email],
       display_name: params[:user][:display_name],
       role: params[:user][:role],
-      status: 'pending',
-      created_at: Time.now,
-      updated_at: Time.now
+      status: 'pending'
     )
     
     # Check if this email is pre-approved as admin
-    admin_emails = firestore_collection('admin_emails').get.map { |doc| doc.data['email'] }
+    admin_emails = AdminEmail.pluck(:email)
     if admin_emails.include?(@user.email)
       @user.role = 'admin'
       @user.status = 'approved'
     end
     
     # Save the user
-    @user.save
-    
-    # If the user is a participant, create a points record
-    if @user.role == 'participant'
-      Points.new(
-        user_id: @user.id,
-        available: 0,
-        pending: 0,
-        redeemed: 0,
-        created_at: Time.now,
-        updated_at: Time.now
-      ).save
-    end
-    
-    # Sign in the user
-    session[:user_uid] = @user.uid
-    session[:auth_data] = nil
-    
-    # Notify admins about new user (in a real app, this would send an email)
-    notify_admins_about_new_user(@user) unless @user.admin?
-    
-    if @user.approved?
-      redirect_to dashboard_path, notice: "Account created successfully!"
+    if @user.save
+      # If the user is a participant, create a points record
+      if @user.role == 'participant'
+        Points.create(
+          user_id: @user.id,
+          available: 0,
+          pending: 0,
+          redeemed: 0
+        )
+      end
+      
+      # Sign in the user
+      session[:user_uid] = @user.uid
+      session[:auth_data] = nil
+      
+      # Notify admins about new user (in a real app, this would send an email)
+      notify_admins_about_new_user(@user) unless @user.admin?
+      
+      if @user.approved?
+        redirect_to dashboard_path, notice: "Account created successfully!"
+      else
+        redirect_to pending_path
+      end
     else
-      redirect_to pending_path
+      flash.now[:alert] = "Error creating account: #{@user.errors.full_messages.join(', ')}"
+      render :new
     end
   end
 
@@ -105,76 +99,16 @@ class UsersController < ApplicationController
       @debug_info[:uid_from_session] = uid
       
       if uid
-        # Try to find the user in Firebase by UID
-        begin
-          Rails.logger.info "Pending action - Looking for user by uid: #{uid}"
+        # Try to find the user by UID
+        @user = User.find_by(uid: uid)
+        @debug_info[:user_from_database] = @user.inspect if @user
+        
+        if @user.nil?
+          @debug_info[:error] = "User not found in database by UID"
           
-          # First try to find the user with the User model method
-          @user = User.find_by_uid(uid)
-          @debug_info[:user_from_model_method] = @user.inspect
-          
-          # If that fails, try a direct query
-          if @user.nil?
-            Rails.logger.info "Pending action - User not found by model method, trying direct query"
-            query = FIRESTORE.col('users').where('uid', '==', uid).limit(1)
-            docs = query.get
-            first_doc = docs.first
-            
-            @debug_info[:query_result] = "Query executed"
-            @debug_info[:first_doc] = first_doc.inspect if first_doc
-            
-            if first_doc
-              Rails.logger.info "Pending action - User found in Firebase"
-              user_data = first_doc.data
-              @debug_info[:user_data] = user_data
-              
-              # Create a new hash to avoid modifying the frozen hash
-              mutable_user_data = user_data.transform_keys(&:to_sym)
-              mutable_user_data[:id] = first_doc.document_id
-              
-              @debug_info[:document_id] = first_doc.document_id
-              @debug_info[:mutable_user_data] = mutable_user_data
-              
-              # Create a new User object with the data
-              @user = User.new(mutable_user_data)
-              
-              # Set the session user_uid to ensure user_signed_in? returns true
-              session[:user_uid] = @user.uid
-            else
-              Rails.logger.info "Pending action - User not found in Firebase by UID"
-              @debug_info[:error] = "User not found in Firebase by UID"
-              
-              # If we have a user in the all_users list with this UID, use that
-              all_users_data = []
-              begin
-                all_users_query = FIRESTORE.col('users').get
-                all_users_query.each do |doc|
-                  user_data = doc.data
-                  user_data[:id] = doc.document_id
-                  all_users_data << { id: doc.document_id, data: user_data }
-                  
-                  # If we find a user with matching UID, use it
-                  if user_data['uid'] == uid
-                    Rails.logger.info "Found user with matching UID in all_users"
-                    # Create a new hash to avoid modifying the frozen hash
-                    mutable_user_data = user_data.transform_keys(&:to_sym)
-                    mutable_user_data[:id] = doc.document_id
-                    @user = User.new(mutable_user_data)
-                    @debug_info[:user_found_in_all_users] = true
-                    break
-                  end
-                end
-                @debug_info[:all_users] = all_users_data
-              rescue => e
-                Rails.logger.error "Error querying all users: #{e.message}"
-                @debug_info[:all_users_error] = e.message
-              end
-            end
-          end
-        rescue => e
-          Rails.logger.error "Pending action - Error querying Firebase: #{e.message}"
-          @debug_info[:error] = e.message
-          @debug_info[:backtrace] = e.backtrace.join("\n")
+          # Get all users for debugging
+          all_users = User.all
+          @debug_info[:all_users] = all_users.map { |u| { id: u.id, uid: u.uid, email: u.email } }
         end
       end
     else
@@ -203,17 +137,7 @@ class UsersController < ApplicationController
     end
     
     # Get all users for debugging
-    begin
-      all_users_data = []
-      all_users_query = FIRESTORE.col('users').get
-      all_users_query.each do |doc|
-        user_data = doc.data
-        all_users_data << { id: doc.document_id, data: user_data }
-      end
-      @debug_info[:all_users] = all_users_data
-    rescue => e
-      @debug_info[:all_users_error] = e.message
-    end
+    @debug_info[:all_users] = User.all.map { |u| { id: u.id, uid: u.uid, email: u.email } }
     
     redirect_to dashboard_path if @user&.approved?
   end
@@ -222,24 +146,28 @@ class UsersController < ApplicationController
     # Admin approves a user
     user = User.find(params[:id])
     user.status = 'approved'
-    user.save
     
-    # Notify the user (in a real app, this would send an email)
-    notify_user_about_approval(user)
-    
-    redirect_to users_path, notice: "User approved successfully!"
+    if user.save
+      # Notify the user (in a real app, this would send an email)
+      notify_user_about_approval(user)
+      redirect_to users_path, notice: "User approved successfully!"
+    else
+      redirect_to users_path, alert: "Error approving user: #{user.errors.full_messages.join(', ')}"
+    end
   end
 
   def reject
     # Admin rejects a user
     user = User.find(params[:id])
     user.status = 'rejected'
-    user.save
     
-    # Notify the user (in a real app, this would send an email)
-    notify_user_about_rejection(user)
-    
-    redirect_to users_path, notice: "User rejected successfully!"
+    if user.save
+      # Notify the user (in a real app, this would send an email)
+      notify_user_about_rejection(user)
+      redirect_to users_path, notice: "User rejected successfully!"
+    else
+      redirect_to users_path, alert: "Error rejecting user: #{user.errors.full_messages.join(', ')}"
+    end
   end
 
   private

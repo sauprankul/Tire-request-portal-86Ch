@@ -9,28 +9,13 @@ class ApplicationController < ActionController::Base
     
     if session[:user_uid]
       Rails.logger.info "Looking for user with UID: #{session[:user_uid]}"
-      # Try to find the user by UID
-      @current_user = User.find_by_uid(session[:user_uid])
+      # Find user by UID using ActiveRecord
+      @current_user = User.find_by(uid: session[:user_uid])
       
-      # If not found, try to find by querying directly
       if @current_user.nil?
-        Rails.logger.info "User not found by find_by_uid, trying direct query"
-        begin
-          query = firestore_collection('users').where('uid', '==', session[:user_uid]).limit(1)
-          docs = query.get
-          first_doc = docs.first
-          
-          if first_doc
-            Rails.logger.info "User found in Firebase by query"
-            user_data = first_doc.data
-            user_data[:id] = first_doc.document_id
-            @current_user = User.new(user_data)
-          else
-            Rails.logger.info "User not found in Firebase by query either"
-          end
-        rescue => e
-          Rails.logger.error "Error querying Firebase for user: #{e.message}"
-        end
+        Rails.logger.info "User not found by uid: #{session[:user_uid]}"
+      else
+        Rails.logger.info "User found: #{@current_user.email}"
       end
     end
     
@@ -88,8 +73,10 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  # This method is kept for backward compatibility but now returns nil
+  # as we're no longer using Firestore
   def firestore_collection(collection_name)
-    # Use the global FIRESTORE constant directly
-    FIRESTORE.col(collection_name)
+    Rails.logger.warn "firestore_collection called but we're using PostgreSQL now"
+    nil
   end
 end

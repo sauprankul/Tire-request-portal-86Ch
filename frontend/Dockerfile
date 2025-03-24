@@ -24,11 +24,10 @@ RUN echo "GEMFILE CONTENTS:" && cat Gemfile
 RUN echo "RUBY VERSION BEFORE BUNDLE:" && ruby -v
 RUN bundle install
 
-# Copy rest of the application code
-COPY . .
+# Note: We're not copying the application code here as we're using volume mounting
 
-RUN echo "AFTER COPYING ALL FILES:" && pwd && ls -la
-RUN chmod +x ./bin/rails
+RUN echo "AFTER BUNDLE INSTALL:" && pwd && ls -la
+RUN mkdir -p ./bin && touch ./bin/rails && chmod +x ./bin/rails
 
 # Create a test script for logger
 RUN echo 'puts "Testing logger loading:"\n\
@@ -38,6 +37,7 @@ puts "Logger::Severity constants: #{Logger::Severity.constants}"\n\
 ' > /usr/local/bin/test_logger.rb
 
 # Add a command to disable asset compilation during startup
+RUN mkdir -p /rails_app/config/initializers
 RUN echo 'Rails.application.config.assets.compile = false' > /rails_app/config/initializers/disable_asset_compilation.rb
 
 # Precompile assets during build time
@@ -132,6 +132,11 @@ echo "CHECKING FOR MANIFEST.JS"\n\
 if [ ! -f ./app/assets/config/manifest.js ]; then\n\
   echo "manifest.js is missing, this should be in the repository"\n\
 fi\n\
+echo "CHECKING FOR APPLICATION.JS FILES"\n\
+echo "In app/assets/javascripts:"\n\
+ls -la ./app/assets/javascripts/ || echo "Directory not found"\n\
+echo "In app/javascript:"\n\
+ls -la ./app/javascript/ || echo "Directory not found"\n\
 echo "CREATING AND MIGRATING DATABASE"\n\
 cd /rails_app\n\
 bundle check || bundle install\n\

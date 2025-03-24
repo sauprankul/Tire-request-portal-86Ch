@@ -47,11 +47,8 @@ class DashboardController < ApplicationController
       @requests = Request.all
     end
     
-    @users = firestore_collection('users').get.map do |doc|
-      user_data = doc.data
-      user_data[:id] = doc.document_id
-      User.new(user_data)
-    end
+    # Get users from PostgreSQL database
+    @users = User.all
     
     @pending_users = @users.select { |user| user.pending? }
   end

@@ -67,10 +67,29 @@ class ApplicationController < ActionController::Base
   end
 
   def authenticate_approved_user!
-    if user_signed_in? && !current_user.approved?
-      flash[:alert] = "Your account is pending approval."
-      redirect_to pending_path
+    Rails.logger.info "===== authenticate_approved_user! ====="
+    Rails.logger.info "user_signed_in?: #{user_signed_in?}"
+    
+    if user_signed_in?
+      Rails.logger.info "User: #{current_user.email}, Status: #{current_user.status}, Approved?: #{current_user.approved?}"
+      
+      # Reload the user from the database to ensure we have the latest status
+      fresh_user = User.find_by(id: current_user.id)
+      if fresh_user
+        Rails.logger.info "Fresh user status from database: #{fresh_user.status}, Approved?: #{fresh_user.approved?}"
+        # Update the current_user with the latest data
+        @current_user = fresh_user
+      end
+      
+      if !current_user.approved?
+        Rails.logger.info "User is not approved, redirecting to pending page"
+        flash[:alert] = "Your account is pending approval."
+        redirect_to pending_path
+      else
+        Rails.logger.info "User is approved, proceeding to dashboard"
+      end
     end
+    Rails.logger.info "===== End of authenticate_approved_user! ====="
   end
 
   # This method is kept for backward compatibility but now returns nil

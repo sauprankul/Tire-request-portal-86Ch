@@ -14,14 +14,14 @@ class SessionsController < ApplicationController
       Rails.logger.info "Auth object class: #{auth.class.name}"
       Rails.logger.info "Auth details: uid=#{auth.uid}, provider=#{auth.provider}, info.email=#{auth.info.email}"
       
-      # Find or create user
+      # Find user by UID
       Rails.logger.info "Looking for user by uid: #{auth.uid}"
-      user = User.find_by_uid(auth.uid)
+      user = User.find_by(uid: auth.uid)
       Rails.logger.info "User lookup result: #{user.inspect}"
       
       if user
         # Existing user - sign them in
-        Rails.logger.info "Setting session user_uid: #{user.uid}"
+        Rails.logger.info "Existing user found, setting session user_uid: #{user.uid}"
         session[:user_uid] = user.uid
         
         Rails.logger.info "Checking if user is approved: #{user.approved?}"

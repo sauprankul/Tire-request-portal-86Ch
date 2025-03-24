@@ -89,6 +89,8 @@ class UsersController < ApplicationController
 
   def pending
     # Show pending approval page
+    Rails.logger.info "===== UsersController#pending - Starting ====="
+    
     @user = current_user
     @debug_info = {}
     @debug_info[:session_user_uid] = session[:user_uid]
@@ -98,18 +100,12 @@ class UsersController < ApplicationController
       uid = session[:user_uid]
       @debug_info[:uid_from_session] = uid
       
-      if uid
-        # Try to find the user by UID
-        @user = User.find_by(uid: uid)
-        @debug_info[:user_from_database] = @user.inspect if @user
-        
-        if @user.nil?
-          @debug_info[:error] = "User not found in database by UID"
-          
-          # Get all users for debugging
-          all_users = User.all
-          @debug_info[:all_users] = all_users.map { |u| { id: u.id, uid: u.uid, email: u.email } }
-        end
+      # Try to find the user by UID using PostgreSQL
+      @user = User.find_by(uid: uid)
+      @debug_info[:user_from_database] = @user.inspect if @user
+      
+      if @user.nil?
+        @debug_info[:error] = "User not found in database by UID"
       end
     else
       @debug_info[:current_user] = @user.inspect if @user
@@ -136,10 +132,20 @@ class UsersController < ApplicationController
       end
     end
     
-    # Get all users for debugging
-    @debug_info[:all_users] = User.all.map { |u| { id: u.id, uid: u.uid, email: u.email } }
+    # If we have a user, reload it from the database to ensure we have the latest status
+    if @user && @user.persisted?
+      @user.reload
+      Rails.logger.info "User reloaded from database: #{@user.email}, Status: #{@user.status}, Approved?: #{@user.approved?}"
+      
+      # If the user is approved, redirect to dashboard
+      if @user.approved?
+        Rails.logger.info "User is approved, redirecting to dashboard"
+        redirect_to dashboard_path and return
+      end
+    end
     
-    redirect_to dashboard_path if @user&.approved?
+    Rails.logger.info "User is not approved or not found, showing pending page"
+    Rails.logger.info "===== UsersController#pending - Completed ====="
   end
 
   def approve

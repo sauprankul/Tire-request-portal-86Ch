@@ -148,6 +148,8 @@ echo "UPDATING RAILS BINSTUBS"\n\
 bundle exec rake app:update:bin\n\
 echo "PRECOMPILING ASSETS"\n\
 RAILS_ENV=development NODE_ENV=development bundle exec rake assets:precompile --trace\n\
+echo "REMOVING SERVER.PID FILE IF IT EXISTS"\n\
+rm -f /rails_app/tmp/pids/server.pid\n\
 echo "STARTING RAILS SERVER"\n\
 mkdir -p /rails_app/tmp/pids\n\
 bundle exec bin/rails server -b 0.0.0.0\n\

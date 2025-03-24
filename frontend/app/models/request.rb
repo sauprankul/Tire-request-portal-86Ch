@@ -28,6 +28,23 @@ class Request < ApplicationRecord
   scope :unassigned, -> { where(assigned_rep_id: nil) }
   scope :by_status, ->(status) { where(status: status) }
 
+  # Class methods for dashboard controller
+  def self.find_by_user_id(user_id)
+    where(user_id: user_id)
+  end
+
+  def self.find_by_representative_id(rep_id)
+    where(assigned_rep_id: rep_id)
+  end
+
+  def self.find_unassigned
+    unassigned
+  end
+
+  def self.find_by_status(status)
+    by_status(status)
+  end
+
   def assign_to_representative(rep_id)
     update(assigned_rep_id: rep_id)
   end

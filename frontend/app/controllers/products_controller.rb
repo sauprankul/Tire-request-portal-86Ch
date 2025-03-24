@@ -56,7 +56,9 @@ class ProductsController < ApplicationController
     # Check if product is used in any requests
     requests = firestore_collection('requests').where('product_id', '==', @product.id).get
     
-    if requests.empty?
+    # Fix: Check if the enumerable has any elements
+    first_request = requests.first
+    if first_request.nil?
       # Safe to delete
       firestore_document('products', @product.id).delete
       redirect_to products_path, notice: 'Product was successfully deleted.'

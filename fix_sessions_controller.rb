@@ -55,16 +55,8 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    # Sign out the user
     session[:user_uid] = nil
     redirect_to root_path, notice: "Signed out successfully!"
-  end
-
-  def failure
-    Rails.logger.error "===== SessionsController#failure - Authentication Failed ====="
-    Rails.logger.error "Failure message: #{params[:message]}"
-    Rails.logger.error "Strategy: #{params[:strategy]}"
-    
-    flash[:alert] = "Authentication failed: #{params[:message] || 'Unknown error'}"
-    redirect_to root_path
   end
 end

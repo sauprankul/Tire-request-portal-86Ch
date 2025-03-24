@@ -1,9 +1,21 @@
-class SessionsController < ApplicationController
-  def new
-    # Render the sign-in page
-  end
+#!/usr/bin/env ruby
 
-  def create
+# This script adds enhanced debugging to the SessionsController
+# to help identify where it's hanging during Google OAuth callback
+
+puts "Starting SessionsController debugging script..."
+
+controller_path = "/rails_app/app/controllers/sessions_controller.rb"
+puts "Reading controller file from: #{controller_path}"
+
+begin
+  controller_content = File.read(controller_path)
+  puts "Successfully read controller file (#{controller_content.size} bytes)"
+  
+  # Add debugging to the create method
+  debugged_content = controller_content.gsub(
+    /def create.*?end/m,
+    %{def create
     # Handle OmniAuth callback from Google
     Rails.logger.info "===== SessionsController#create - Starting ====="
     Rails.logger.info "Request parameters: #{request.params.inspect}"
@@ -52,19 +64,14 @@ class SessionsController < ApplicationController
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       redirect_to root_path, alert: "Authentication error: #{e.message}"
     end
-  end
-
-  def destroy
-    session[:user_uid] = nil
-    redirect_to root_path, notice: "Signed out successfully!"
-  end
-
-  def failure
-    Rails.logger.error "===== SessionsController#failure - Authentication Failed ====="
-    Rails.logger.error "Failure message: #{params[:message]}"
-    Rails.logger.error "Strategy: #{params[:strategy]}"
-    
-    flash[:alert] = "Authentication failed: #{params[:message] || 'Unknown error'}"
-    redirect_to root_path
-  end
+  end}
+  )
+  
+  # Write the debugged content back to the file
+  File.write(controller_path, debugged_content)
+  puts "SessionsController debugged successfully!"
+  
+rescue => e
+  puts "ERROR: #{e.message}"
+  puts e.backtrace
 end

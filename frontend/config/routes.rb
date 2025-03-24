@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   # Authentication routes
   get '/signin', to: 'sessions#new', as: 'signin'
   get '/signout', to: 'sessions#destroy', as: 'signout'
+  # OmniAuth routes
   get '/auth/:provider/callback', to: 'sessions#create'
   get '/auth/failure', to: 'sessions#failure'
 

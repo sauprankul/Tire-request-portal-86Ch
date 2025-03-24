@@ -23,10 +23,13 @@ class Points
   def self.find_by_user_id(user_id)
     query = firestore_collection('points').where('user_id', '==', user_id).limit(1)
     docs = query.get
-    return nil if docs.empty?
     
-    points_data = docs.first.data
-    points_data[:id] = docs.first.document_id
+    # Fix: Check if the enumerable has any elements
+    first_doc = docs.first
+    return nil if first_doc.nil?
+    
+    points_data = first_doc.data
+    points_data[:id] = first_doc.document_id
     new(points_data)
   end
 

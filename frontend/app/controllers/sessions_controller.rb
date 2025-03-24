@@ -38,9 +38,11 @@ class SessionsController < ApplicationController
         session[:auth_data] = {
           uid: auth.uid,
           email: auth.info.email,
-          display_name: auth.info.name
+          display_name: auth.info.name,
+          provider: auth.provider
         }
         
+        Rails.logger.info "Session auth_data: #{session[:auth_data].inspect}"
         Rails.logger.info "Redirecting to new_user_path"
         redirect_to new_user_path
       end

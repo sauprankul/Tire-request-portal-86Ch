@@ -1,10 +1,19 @@
 require 'timeout'
+require 'active_model'
 
 class User
+  include ActiveModel::Model
+  include ActiveModel::Attributes
+  include ActiveModel::Conversion
+  include ActiveModel::Validations
+
   attr_accessor :id, :uid, :email, :display_name, :role, :status, :created_at, :updated_at
 
   ROLES = %w[participant representative admin].freeze
   STATUSES = %w[pending approved rejected].freeze
+
+  validates :role, inclusion: { in: ROLES }, allow_nil: true
+  validates :status, inclusion: { in: STATUSES }
 
   def initialize(attributes = {})
     @id = attributes[:id]

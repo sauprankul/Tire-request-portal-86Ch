@@ -4,11 +4,6 @@
       <h2>Admin Dashboard</h2>
       <p class="text-muted">
         Welcome back, <%= current_user.display_name %>!
-        <% if params[:view] != 'participant' %>
-          <%= link_to switch_dashboard_view_path(view: 'participant'), class: "btn btn-sm btn-outline-secondary ms-2" do %>
-            <i class="fas fa-exchange-alt"></i> Switch to Participant View
-          <% end %>
-        <% end %>
       </p>
     </div>
   </div>

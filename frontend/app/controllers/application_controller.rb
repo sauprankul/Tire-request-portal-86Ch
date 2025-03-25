@@ -61,7 +61,7 @@ class ApplicationController < ActionController::Base
 
   def authenticate_participant!
     unless participant? || admin?
-      flash[:alert] = "You don't have permission to access this page."
+      flash[:alert] = "Only participants can perform this action."
       redirect_to root_path
     end
   end

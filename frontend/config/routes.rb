@@ -32,6 +32,9 @@ Rails.application.routes.draw do
       post :withdraw
       post :mark_paid
       post :mark_received
+      post :update_status
+      post :cancel
+      post :admin_update
     end
     
     # Messages nested under requests

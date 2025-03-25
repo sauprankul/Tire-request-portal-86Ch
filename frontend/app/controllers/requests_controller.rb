@@ -1,7 +1,7 @@
 class RequestsController < ApplicationController
   before_action :authenticate_user!
   before_action :authenticate_approved_user!
-  before_action :set_request, only: [:show, :edit, :update, :assign, :withdraw, :mark_paid, :mark_received]
+  before_action :set_request, only: [:show, :edit, :update, :assign, :withdraw, :mark_paid, :mark_received, :update_status, :cancel, :admin_update]
   before_action :authorize_request_access!, only: [:show, :edit, :update]
 
   def index
@@ -27,7 +27,7 @@ class RequestsController < ApplicationController
 
   def show
     @product = Product.find(@request.product_id)
-    @messages = Message.find_by_request_id(@request.id)
+    @messages = Message.where(request_id: @request.id).ordered || []
     @message = Message.new(request_id: @request.id)
   end
 
@@ -221,6 +221,104 @@ class RequestsController < ApplicationController
     ).save
     
     redirect_to @request, notice: "Request marked as received!"
+  end
+
+  def update_status
+    # Only admins can update status directly
+    authenticate_admin!
+    
+    if params[:status].present?
+      old_status = @request.status
+      
+      if @request.update_status(params[:status])
+        # Add a system message
+        Message.new(
+          request_id: @request.id,
+          user_id: current_user.id,
+          content: "Status changed from #{old_status} to #{params[:status]} by #{current_user.display_name}",
+          created_at: Time.now
+        ).save
+        
+        redirect_to @request, notice: "Status updated successfully!"
+      else
+        redirect_to @request, alert: "Failed to update status"
+      end
+    else
+      redirect_to @request, alert: "No status provided"
+    end
+  end
+
+  def cancel
+    # Only admins can cancel requests directly
+    authenticate_admin!
+    
+    old_status = @request.status
+    
+    # If using points, return them to available
+    if @request.payment_type == 'points'
+      product = Product.find(@request.product_id)
+      points_to_return = product.points_cost * @request.quantity
+      @request.user.points.cancel_pending(points_to_return)
+    end
+    
+    if @request.update_status('CANCELED')
+      # Add a system message
+      Message.new(
+        request_id: @request.id,
+        user_id: current_user.id,
+        content: "Request canceled by admin #{current_user.display_name}. Previous status: #{old_status}",
+        created_at: Time.now
+      ).save
+      
+      redirect_to @request, notice: "Request has been canceled"
+    else
+      redirect_to @request, alert: "Failed to cancel request"
+    end
+  end
+
+  def admin_update
+    # Only admins can use this action
+    authenticate_admin!
+    
+    # Update status if provided
+    if params[:status].present? && params[:status] != @request.status
+      old_status = @request.status
+      if @request.update_status(params[:status])
+        # Add a system message
+        Message.new(
+          request_id: @request.id,
+          user_id: current_user.id,
+          content: "Status changed from #{old_status} to #{params[:status]} by admin #{current_user.display_name}",
+          created_at: Time.now
+        ).save
+      end
+    end
+    
+    # Update assigned representative if provided
+    if params[:assigned_rep_id].present? && params[:assigned_rep_id] != @request.assigned_rep_id
+      old_rep_id = @request.assigned_rep_id
+      old_rep_name = old_rep_id.present? ? User.find(old_rep_id).display_name : "Unassigned"
+      
+      @request.assign_to_representative(params[:assigned_rep_id])
+      
+      new_rep_name = params[:assigned_rep_id].present? ? User.find(params[:assigned_rep_id]).display_name : "Unassigned"
+      
+      # Add a system message
+      Message.new(
+        request_id: @request.id,
+        user_id: current_user.id,
+        content: "Representative changed from #{old_rep_name} to #{new_rep_name} by admin #{current_user.display_name}",
+        created_at: Time.now
+      ).save
+    end
+    
+    # Update admin notes if provided
+    if params[:notes].present?
+      @request.notes = params[:notes]
+      @request.save
+    end
+    
+    redirect_to @request, notice: "Request updated successfully!"
   end
 
   private

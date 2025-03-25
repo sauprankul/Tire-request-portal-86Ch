@@ -1,4 +1,4 @@
-<div class="container-fluid mt-4">
+<div class="container mt-5">
   <div class="row mb-4">
     <div class="col-md-8">
       <h2>Admin Dashboard</h2>
@@ -13,306 +13,108 @@
     </div>
   </div>
 
-  <!-- Quick Stats -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card bg-primary text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h6 class="card-title">Total Requests</h6>
-              <h2 class="mb-0"><%= @requests.count %></h2>
-            </div>
-            <i class="fas fa-file-alt fa-3x opacity-50"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card bg-success text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h6 class="card-title">Active Users</h6>
-              <h2 class="mb-0"><%= @users.count { |u| u.approved? } %></h2>
-            </div>
-            <i class="fas fa-users fa-3x opacity-50"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card bg-warning text-dark">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h6 class="card-title">Pending Approvals</h6>
-              <h2 class="mb-0"><%= @pending_users.count %></h2>
-            </div>
-            <i class="fas fa-user-clock fa-3x opacity-50"></i>
-          </div>
-          <% if @pending_users.any? %>
-            <%= link_to users_path(status: 'pending'), class: "stretched-link text-dark" do %>
-              <small>View pending users <i class="fas fa-arrow-right"></i></small>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card bg-info text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h6 class="card-title">Shipped Orders</h6>
-              <h2 class="mb-0"><%= @requests.count { |r| r.status == 'SHIPPED' } %></h2>
-            </div>
-            <i class="fas fa-shipping-fast fa-3x opacity-50"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Requests Management -->
-  <div class="row mb-4">
-    <div class="col-md-12">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Requests Management</h5>
-            <div>
-              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                <i class="fas fa-filter"></i> Filters
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="collapse" id="filterCollapse">
-          <div class="card-body bg-light border-bottom">
-            <form action="<%= admin_dashboard_path %>" method="get" class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                  <option value="">All Statuses</option>
-                  <% Request::STATUSES.each do |status| %>
-                    <option value="<%= status %>" <%= 'selected' if params[:status] == status %>><%= status.titleize %></option>
-                  <% end %>
-                </select>
-              </div>
-              
-              <div class="col-md-3">
-                <label class="form-label">Participant</label>
-                <select name="user_id" class="form-select">
-                  <option value="">All Participants</option>
-                  <% @users.select { |u| u.participant? }.each do |user| %>
-                    <option value="<%= user.id %>" <%= 'selected' if params[:user_id] == user.id %>><%= user.display_name %></option>
-                  <% end %>
-                </select>
-              </div>
-              
-              <div class="col-md-3">
-                <label class="form-label">Date Range</label>
-                <div class="input-group">
-                  <input type="date" name="start_date" class="form-control" value="<%= params[:start_date] %>">
-                  <span class="input-group-text">to</span>
-                  <input type="date" name="end_date" class="form-control" value="<%= params[:end_date] %>">
-                </div>
-              </div>
-              
-              <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
-                <a href="<%= admin_dashboard_path %>" class="btn btn-outline-secondary">Clear</a>
-              </div>
-            </form>
-          </div>
-        </div>
-        
-        <div class="card-body p-0">
-          <% if @requests.empty? %>
-            <div class="p-4 text-center">
-              <p class="text-muted mb-0">No requests found matching the selected criteria.</p>
-            </div>
-          <% else %>
-            <div class="table-responsive">
-              <table class="table table-hover mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>ID</th>
-                    <th>Participant</th>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Payment</th>
-                    <th>Status</th>
-                    <th>Representative</th>
-                    <th>Created</th>
-                    <th>Updated</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @requests.each do |request| %>
-                    <tr>
-                      <td><%= link_to "##{request.id[0..5]}", request_path(request) %></td>
-                      <td><%= User.find(request.user_id).display_name %></td>
-                      <td><%= Product.find(request.product_id).name %></td>
-                      <td><%= request.quantity %></td>
-                      <td>
-                        <% if request.payment_type == 'points' %>
-                          <span class="badge bg-success">Points</span>
-                        <% elsif request.payment_type == 'paypal' %>
-                          <span class="badge bg-primary">PayPal</span>
-                        <% else %>
-                          <span class="badge bg-info">Credit Card</span>
-                        <% end %>
-                      </td>
-                      <td>
-                        <% case request.status 
-                           when 'SUBMITTED' %>
-                          <span class="badge bg-secondary">Submitted</span>
-                        <% when 'AWAITING_PAYMENT' %>
-                          <span class="badge bg-warning text-dark">Awaiting Payment</span>
-                        <% when 'PAID' %>
-                          <span class="badge bg-info">Paid</span>
-                        <% when 'SHIPPED' %>
-                          <span class="badge bg-primary">Shipped</span>
-                        <% when 'RECEIVED' %>
-                          <span class="badge bg-success">Received</span>
-                        <% when 'BACKORDERED' %>
-                          <span class="badge bg-danger">Backordered</span>
-                        <% when 'CANCELED' %>
-                          <span class="badge bg-danger">Canceled</span>
-                        <% end %>
-                      </td>
-                      <td>
-                        <% if request.assigned_rep_id %>
-                          <%= User.find(request.assigned_rep_id).display_name %>
-                        <% else %>
-                          <span class="text-muted">Unassigned</span>
-                        <% end %>
-                      </td>
-                      <td><%= request.created_at.strftime("%b %d, %Y") %></td>
-                      <td><%= time_ago_in_words(request.updated_at) %> ago</td>
-                      <td>
-                        <div class="btn-group btn-group-sm">
-                          <%= link_to request_path(request), class: "btn btn-outline-primary" do %>
-                            <i class="fas fa-eye"></i> View
-                          <% end %>
-                          <%= link_to edit_request_path(request), class: "btn btn-outline-secondary" do %>
-                            <i class="fas fa-edit"></i> Edit
-                          <% end %>
-                        </div>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- User Management and Points Management -->
+  <!-- Admin Resource Management Tiles -->
   <div class="row">
+    <!-- Users Management Tile -->
     <div class="col-md-6 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">User Management</h5>
-          <%= link_to users_path, class: "btn btn-sm btn-outline-primary" do %>
-            <i class="fas fa-users"></i> View All Users
-          <% end %>
-        </div>
-        <div class="card-body p-0">
-          <% if @pending_users.empty? %>
-            <div class="p-4 text-center">
-              <p class="text-muted mb-0">No pending user approvals.</p>
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-users fa-5x mb-3 text-primary"></i>
+          <h3 class="card-title">User Management</h3>
+          <p class="card-text">Manage users, approve pending registrations, and set user roles</p>
+          <div class="mt-4">
+            <div class="d-flex justify-content-center gap-2">
+              <div class="text-center px-3">
+                <h4 class="mb-0"><%= @users.count { |u| u.approved? } %></h4>
+                <small class="text-muted">Active Users</small>
+              </div>
+              <div class="text-center px-3">
+                <h4 class="mb-0 text-warning"><%= @pending_users.count %></h4>
+                <small class="text-muted">Pending</small>
+              </div>
             </div>
-          <% else %>
-            <div class="table-responsive">
-              <table class="table table-hover mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Registered</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @pending_users.each do |user| %>
-                    <tr>
-                      <td><%= user.display_name %></td>
-                      <td><%= user.email %></td>
-                      <td>
-                        <span class="badge <%= user.admin? ? 'bg-danger' : (user.representative? ? 'bg-primary' : 'bg-success') %>">
-                          <%= user.role.capitalize %>
-                        </span>
-                      </td>
-                      <td><%= time_ago_in_words(user.created_at) %> ago</td>
-                      <td>
-                        <div class="btn-group btn-group-sm">
-                          <%= button_to approve_user_path(user), method: :post, class: "btn btn-success" do %>
-                            <i class="fas fa-check"></i> Approve
-                          <% end %>
-                          <%= button_to reject_user_path(user), method: :post, class: "btn btn-danger ms-1" do %>
-                            <i class="fas fa-times"></i> Reject
-                          <% end %>
-                        </div>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
+          </div>
+          <%= link_to users_path, class: "btn btn-primary mt-4" do %>
+            <i class="fas fa-cog"></i> Manage Users
           <% end %>
         </div>
       </div>
     </div>
-    
+
+    <!-- Products Management Tile -->
     <div class="col-md-6 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Points Management</h5>
-          <%= link_to points_path, class: "btn btn-sm btn-outline-primary" do %>
-            <i class="fas fa-coins"></i> Manage All Points
-          <% end %>
-        </div>
-        <div class="card-body">
-          <form action="<%= bulk_update_points_path %>" method="post" class="mb-4">
-            <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
-            <div class="row g-3">
-              <div class="col-md-12">
-                <label class="form-label">Bulk Add Points to Participants</label>
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-boxes fa-5x mb-3 text-success"></i>
+          <h3 class="card-title">Product Management</h3>
+          <p class="card-text">Manage tire products, prices, and availability</p>
+          <div class="mt-4">
+            <div class="d-flex justify-content-center gap-2">
+              <div class="text-center px-3">
+                <h4 class="mb-0"><%= @products&.count || 0 %></h4>
+                <small class="text-muted">Total Products</small>
               </div>
-              
-              <div class="col-md-6">
-                <label class="form-label">Select Participants</label>
-                <select name="user_ids[]" class="form-select" multiple size="5" required>
-                  <% @users.select { |u| u.participant? && u.approved? }.each do |user| %>
-                    <option value="<%= user.id %>"><%= user.display_name %> (<%= user.email %>)</option>
-                  <% end %>
-                </select>
-                <div class="form-text">Hold Ctrl/Cmd to select multiple users</div>
-              </div>
-              
-              <div class="col-md-6">
-                <label class="form-label">Points to Add</label>
-                <input type="number" name="points_amount" class="form-control" min="1" required>
-                <div class="form-text">Enter the number of points to add to each selected user</div>
-                
-                <div class="d-grid mt-4">
-                  <button type="submit" class="btn btn-primary">Add Points</button>
-                </div>
+              <div class="text-center px-3">
+                <h4 class="mb-0 text-success"><%= @products&.count { |p| p.available } || 0 %></h4>
+                <small class="text-muted">Available</small>
               </div>
             </div>
-          </form>
+          </div>
+          <%= link_to products_path, class: "btn btn-success mt-4" do %>
+            <i class="fas fa-cog"></i> Manage Products
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Points Management Tile -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-star fa-5x mb-3 text-warning"></i>
+          <h3 class="card-title">Points Management</h3>
+          <p class="card-text">Manage participant points, allocations, and redemptions</p>
+          <div class="mt-4">
+            <div class="d-flex justify-content-center gap-2">
+              <div class="text-center px-3">
+                <h4 class="mb-0"><%= @points&.sum { |p| p.available } || 0 %></h4>
+                <small class="text-muted">Available Points</small>
+              </div>
+              <div class="text-center px-3">
+                <h4 class="mb-0 text-warning"><%= @points&.sum { |p| p.redeemed } || 0 %></h4>
+                <small class="text-muted">Redeemed</small>
+              </div>
+            </div>
+          </div>
+          <%= link_to points_path, class: "btn btn-warning mt-4" do %>
+            <i class="fas fa-cog"></i> Manage Points
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Requests Management Tile -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-file-alt fa-5x mb-3 text-info"></i>
+          <h3 class="card-title">Request Management</h3>
+          <p class="card-text">Manage tire requests, track status, and process orders</p>
+          <div class="mt-4">
+            <div class="d-flex justify-content-center gap-2">
+              <div class="text-center px-3">
+                <h4 class="mb-0"><%= @requests.count %></h4>
+                <small class="text-muted">Total Requests</small>
+              </div>
+              <div class="text-center px-3">
+                <h4 class="mb-0 text-info"><%= @requests.count { |r| r.status == 'SHIPPED' } %></h4>
+                <small class="text-muted">Shipped</small>
+              </div>
+            </div>
+          </div>
+          <%= link_to requests_path, class: "btn btn-info mt-4" do %>
+            <i class="fas fa-cog"></i> Manage Requests
+          <% end %>
         </div>
       </div>
     </div>

@@ -1,0 +1,5 @@
+<% if @image_name.present? %>
+  <%= image_tag "products/#{@image_name}", alt: "Product Image", class: "img-thumbnail", style: "max-height: 200px;" %>
+<% else %>
+  <div class="bg-dark" style="width: 200px; height: 200px;"></div>
+<% end %>

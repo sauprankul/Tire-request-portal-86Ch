@@ -51,6 +51,12 @@ class DashboardController < ApplicationController
     @users = User.all
     
     @pending_users = @users.select { |user| user.pending? }
+    
+    # Load products data for the admin dashboard
+    @products = Product.all
+    
+    # Load points data for the admin dashboard
+    @points = Points.all
   end
 
   def switch_view

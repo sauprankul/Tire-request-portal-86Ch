@@ -1,0 +1,6 @@
+{
+  "preload_files": [
+    "docs/memory.txt"
+  ],
+  "project_description": "Tire Request Portal - A web application for managing tire requests with user roles (participant, representative, admin), points system, and product management."
+}

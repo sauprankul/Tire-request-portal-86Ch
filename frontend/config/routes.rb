@@ -46,5 +46,12 @@ Rails.application.routes.draw do
   end
 
   # Products routes
-  resources :products
+  resources :products do
+    member do
+      post :duplicate
+    end
+    collection do
+      get :preview_image
+    end
+  end
 end

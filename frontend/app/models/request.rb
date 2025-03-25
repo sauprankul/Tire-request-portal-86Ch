@@ -4,6 +4,9 @@ class Request < ApplicationRecord
   belongs_to :representative, class_name: 'User', foreign_key: 'assigned_rep_id', optional: true
   has_many :messages, dependent: :destroy
 
+  # Define the STATUSES constant for use in views
+  STATUSES = ['SUBMITTED', 'AWAITING_PAYMENT', 'PAID', 'SHIPPED', 'RECEIVED', 'BACKORDERED', 'CANCELED']
+
   # Define enum mappings for PostgreSQL enum types
   enum payment_type: {
     paypal: 'paypal',

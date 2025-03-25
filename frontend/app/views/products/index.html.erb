@@ -5,8 +5,8 @@
       <p class="text-muted">Manage tire products available for requests</p>
     </div>
     <div class="col-md-4 text-end">
-      <%= link_to new_product_path, class: "btn btn-primary" do %>
-        <i class="fas fa-plus"></i> Add New Product
+      <%= link_to new_product_path, class: "btn btn-success btn-lg" do %>
+        <i class="fas fa-plus"></i> Add Product
       <% end %>
       <%= link_to dashboard_path, class: "btn btn-outline-secondary ms-2" do %>
         <i class="fas fa-arrow-left"></i> Back to Dashboard
@@ -14,273 +14,92 @@
     </div>
   </div>
 
-  <!-- Search and Filter -->
+  <!-- Products Table -->
   <div class="card shadow-sm mb-4">
     <div class="card-body">
-      <%= form_with(url: products_path, method: :get, class: "row g-3") do |f| %>
-        <div class="col-md-4">
-          <div class="input-group">
-            <%= f.text_field :search, value: params[:search], class: "form-control", placeholder: "Search products..." %>
-            <button class="btn btn-outline-secondary" type="submit">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-        </div>
-        
-        <div class="col-md-3">
-          <%= f.select :category, 
-            options_for_select([
-              ["All Categories", ""],
-              ["Race Tires", "race"],
-              ["Street Tires", "street"],
-              ["All-Season", "all_season"]
-            ], params[:category]),
-            {}, { class: "form-select", onchange: "this.form.submit()" }
-          %>
-        </div>
-        
-        <div class="col-md-3">
-          <%= f.select :availability, 
-            options_for_select([
-              ["All Availability", ""],
-              ["In Stock", "in_stock"],
-              ["Low Stock", "low_stock"],
-              ["Out of Stock", "out_of_stock"],
-              ["Discontinued", "discontinued"]
-            ], params[:availability]),
-            {}, { class: "form-select", onchange: "this.form.submit()" }
-          %>
-        </div>
-        
-        <div class="col-md-2">
-          <%= link_to products_path, class: "btn btn-outline-secondary w-100" do %>
-            <i class="fas fa-redo"></i> Reset
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-  </div>
-
-  <!-- Products Grid -->
-  <div class="row">
-    <% if @products.empty? %>
-      <div class="col-12 text-center py-5">
-        <div class="alert alert-info">
-          <i class="fas fa-info-circle me-2"></i> No products found. Try adjusting your search criteria or add a new product.
-        </div>
-      </div>
-    <% else %>
-      <% @products.each do |product| %>
-        <div class="col-md-4 mb-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h5 class="mb-0"><%= product.name %></h5>
-              <span class="badge <%= product_availability_badge_class(product.availability) %>">
-                <%= product.availability.titleize %>
-              </span>
-            </div>
-            
-            <div class="card-body">
-              <div class="mb-3">
-                <small class="text-muted">Category:</small>
-                <span class="badge bg-secondary"><%= product.category.titleize %></span>
-              </div>
-              
-              <div class="mb-3">
-                <small class="text-muted">Size:</small>
-                <p class="mb-0"><%= product.size %></p>
-              </div>
-              
-              <div class="mb-3">
-                <small class="text-muted">Description:</small>
-                <p class="mb-0"><%= product.description %></p>
-              </div>
-              
-              <div class="mb-3">
-                <small class="text-muted">Points Required:</small>
-                <p class="mb-0"><strong><%= product.points_required %> points</strong></p>
-              </div>
-              
-              <div class="mb-3">
-                <small class="text-muted">Cash Price:</small>
-                <p class="mb-0"><strong>$<%= sprintf('%.2f', product.cash_price) %></strong></p>
-              </div>
-              
-              <div class="mb-0">
-                <small class="text-muted">Stock Level:</small>
-                <div class="progress" style="height: 10px;">
-                  <div class="progress-bar <%= product_stock_progress_class(product.stock_level, product.low_stock_threshold) %>" 
-                       role="progressbar" 
-                       style="width: <%= product_stock_percentage(product.stock_level, product.max_stock) %>%;" 
-                       aria-valuenow="<%= product.stock_level %>" 
-                       aria-valuemin="0" 
-                       aria-valuemax="<%= product.max_stock %>">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 120px">Image</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Price ($)</th>
+              <th>Points Cost</th>
+              <th>Available</th>
+              <th style="width: 150px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @products.empty? %>
+              <tr>
+                <td colspan="7" class="text-center py-4">
+                  <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i> No products found. Add a new product to get started.
                   </div>
-                </div>
-                <div class="d-flex justify-content-between mt-1">
-                  <small><%= product.stock_level %> in stock</small>
-                  <small>Low: < <%= product.low_stock_threshold %></small>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card-footer bg-white border-top-0">
-              <div class="btn-group w-100">
-                <%= link_to edit_product_path(product), class: "btn btn-outline-primary" do %>
-                  <i class="fas fa-edit"></i> Edit
-                <% end %>
-                
-                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#updateStockModal" data-product-id="<%= product.id %>" data-product-name="<%= product.name %>">
-                  <i class="fas fa-boxes"></i> Update Stock
-                </button>
-                
-                <% if product.active? %>
-                  <%= link_to deactivate_product_path(product), method: :patch, data: { confirm: "Are you sure you want to deactivate this product?" }, class: "btn btn-outline-warning" do %>
-                    <i class="fas fa-ban"></i> Deactivate
-                  <% end %>
-                <% else %>
-                  <%= link_to activate_product_path(product), method: :patch, class: "btn btn-outline-success" do %>
-                    <i class="fas fa-check"></i> Activate
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-      <% end %>
-    <% end %>
-  </div>
-
-  <!-- Pagination -->
-  <% if @products.respond_to?(:total_pages) && @products.total_pages > 1 %>
-    <div class="d-flex justify-content-center mt-4">
-      <nav aria-label="Page navigation">
-        <ul class="pagination">
-          <% if @products.prev_page %>
-            <li class="page-item">
-              <%= link_to_prev_page @products, 'Previous', class: 'page-link' %>
-            </li>
-          <% else %>
-            <li class="page-item disabled">
-              <span class="page-link">Previous</span>
-            </li>
-          <% end %>
-          
-          <% @products.total_pages.times do |i| %>
-            <% page = i + 1 %>
-            <li class="page-item <%= 'active' if page == @products.current_page %>">
-              <%= link_to page, products_path(page: page, search: params[:search], category: params[:category], availability: params[:availability]), class: 'page-link' %>
-            </li>
-          <% end %>
-          
-          <% if @products.next_page %>
-            <li class="page-item">
-              <%= link_to_next_page @products, 'Next', class: 'page-link' %>
-            </li>
-          <% else %>
-            <li class="page-item disabled">
-              <span class="page-link">Next</span>
-            </li>
-          <% end %>
-        </ul>
-      </nav>
-    </div>
-  <% end %>
-</div>
-
-<!-- Update Stock Modal -->
-<div class="modal fade" id="updateStockModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Update Stock</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </td>
+              </tr>
+            <% else %>
+              <% @products.each do |product| %>
+                <tr style="height: 100px;">
+                  <td class="align-middle">
+                    <% if product.image_url.present? %>
+                      <%= image_tag "products/#{product.image_url}", alt: product.name, class: "img-thumbnail", style: "max-height: 80px; max-width: 100px;" %>
+                    <% else %>
+                      <div class="bg-dark" style="width: 80px; height: 80px;"></div>
+                    <% end %>
+                  </td>
+                  <td class="align-middle"><%= product.name %></td>
+                  <td class="align-middle"><%= product.description %></td>
+                  <td class="align-middle">$<%= sprintf('%.2f', product.price) %></td>
+                  <td class="align-middle"><%= product.points_cost %></td>
+                  <td class="align-middle">
+                    <% if product.available %>
+                      <span class="badge bg-success">Yes</span>
+                    <% else %>
+                      <span class="badge bg-danger">No</span>
+                    <% end %>
+                  </td>
+                  <td class="align-middle">
+                    <div class="btn-group" role="group">
+                      <%= link_to edit_product_path(product), class: "btn btn-sm btn-outline-primary" do %>
+                        <i class="fas fa-edit"></i> Edit
+                      <% end %>
+                      <%= button_to duplicate_product_path(product), method: :post, class: "btn btn-sm btn-outline-secondary", style: "margin-left: 10px;" do %>
+                        <i class="fas fa-copy"></i> Copy
+                      <% end %>
+                      <button type="button" class="btn btn-sm btn-outline-danger" style="margin-left: 10px;" data-bs-toggle="modal" data-bs-target="#deleteModal<%= product.id %>">
+                        <i class="fas fa-trash"></i> Delete
+                      </button>
+                    </div>
+                    
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal<%= product.id %>" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Confirm Deletion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body text-center">
+                            <p class="fs-5">PERMANENTLY delete <strong><%= product.name %></strong>?</p>
+                          </div>
+                          <div class="modal-footer justify-content-center">
+                            <button type="button" class="btn btn-lg btn-secondary" data-bs-dismiss="modal">No</button>
+                            <%= button_to product_path(product), method: :delete, class: "btn btn-sm btn-danger ms-3" do %>
+                              Yes
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
       </div>
-      <%= form_with(url: update_stock_product_path(0), method: :patch, id: 'update-stock-form') do |f| %>
-        <div class="modal-body">
-          <p>Updating stock for <strong id="product-name"></strong></p>
-          
-          <div class="mb-3">
-            <label class="form-label">Current Stock Level</label>
-            <input type="text" class="form-control" id="current-stock" disabled>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Action</label>
-            <%= f.select :action, 
-              options_for_select([
-                ["Add to Stock", "add"],
-                ["Remove from Stock", "remove"],
-                ["Set Exact Stock Level", "set"]
-              ]),
-              {}, { class: "form-select", id: "stock-action" }
-            %>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label" id="quantity-label">Quantity to Add</label>
-            <%= f.number_field :quantity, min: 1, class: "form-control", required: true %>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Reason</label>
-            <%= f.text_field :reason, class: "form-control", placeholder: "e.g., New shipment, Inventory correction, etc.", required: true %>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= f.submit "Update Stock", class: "btn btn-primary" %>
-        </div>
-      <% end %>
     </div>
   </div>
 </div>
-
-<% content_for :javascript do %>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Handle update stock modal
-      const updateStockModal = document.getElementById('updateStockModal');
-      if (updateStockModal) {
-        updateStockModal.addEventListener('show.bs.modal', function (event) {
-          const button = event.relatedTarget;
-          const productId = button.getAttribute('data-product-id');
-          const productName = button.getAttribute('data-product-name');
-          
-          // Update form action URL with the correct product ID
-          const form = document.getElementById('update-stock-form');
-          form.action = form.action.replace(/\/products\/\d+\/update_stock/, `/products/${productId}/update_stock`);
-          
-          document.getElementById('product-name').textContent = productName;
-          
-          // Fetch current stock level via AJAX
-          fetch(`/products/${productId}/stock`)
-            .then(response => response.json())
-            .then(data => {
-              document.getElementById('current-stock').value = data.stock_level;
-            });
-        });
-      }
-      
-      // Update quantity label based on action selection
-      const stockAction = document.getElementById('stock-action');
-      const quantityLabel = document.getElementById('quantity-label');
-      
-      if (stockAction && quantityLabel) {
-        stockAction.addEventListener('change', function() {
-          switch(this.value) {
-            case 'add':
-              quantityLabel.textContent = 'Quantity to Add';
-              break;
-            case 'remove':
-              quantityLabel.textContent = 'Quantity to Remove';
-              break;
-            case 'set':
-              quantityLabel.textContent = 'Set Stock Level To';
-              break;
-          }
-        });
-      }
-    });
-  </script>
-<% end %>

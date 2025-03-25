@@ -1,0 +1,56 @@
+# Tire Request Portal - Essential Context
+
+IMPORTANT: If something is very important, persist it to this memory.txt file. When I say "commit to memory", I mean update this file.
+IMPORTANT: All responses should be concise and to the point.
+
+## Project Setup
+- The application runs via Docker with docker-compose
+- Container names:
+  - Web container: tire_request_portal-web-1
+  - Firebase emulator container: tire_request_portal-firebase-1
+- The frontend/ directory is mounted to /rails_app in the web container
+- No need to manually copy files to the container as the directory is mounted
+- To restart the web service: `docker-compose restart web`
+
+## Architecture
+- Rails 7.0.4 application with Ruby 3.2.2
+- Currently transitioning from Firebase/Firestore to PostgreSQL
+- PostgreSQL schema defined in backend/db/schema.sql
+- Using Google OAuth for authentication
+- The Rails container is named "web", not "frontend"
+
+## Database Schema
+- PostgreSQL enum types for data integrity:
+  - user_role: 'participant', 'representative', 'admin'
+  - user_status: 'pending', 'approved', 'rejected'
+  - request_payment_type: 'paypal', 'credit_card', 'points'
+  - request_status: 'SUBMITTED', 'AWAITING_PAYMENT', 'PAID', 'SHIPPED', 'RECEIVED', 'BACKORDERED', 'CANCELED'
+- Key tables:
+  - Users: uid, email, display_name, role, status
+  - Points: linked to users
+  - Products: product details for tire products
+  - Requests: relationships to users and products
+  - Messages: for request communications
+  - AdminEmails: for approved admin email addresses
+
+## User Roles
+- Participant: Regular users who can request tires
+- Representative: Can manage requests
+- Admin: Full access to all features
+
+## Key Features
+- Dashboard views for different user roles
+- Product management for admins
+- Request management
+- Points system for tire redemption
+- User approval workflow
+
+## Fixed Issues
+- Added Request::STATUSES constant for admin view
+- Added view-switching button for admins in participant dashboard
+- Fixed Firestore query handling issues
+- Fixed asset pipeline configuration
+
+## Current Work
+- Enhancing admin product management
+- Completing migration from Firestore to PostgreSQL

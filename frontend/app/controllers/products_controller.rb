@@ -1,10 +1,13 @@
 class ProductsController < ApplicationController
   before_action :authenticate_user!
   before_action :authenticate_admin!, except: [:index, :show]
-  before_action :set_product, only: [:show, :edit, :update, :destroy]
+  before_action :set_product, only: [:show, :edit, :update, :destroy, :duplicate]
 
   def index
     @products = Product.all
+    @product_images = Dir.glob(Rails.root.join('app', 'assets', 'images', 'products', '*.png')).map do |path|
+      File.basename(path)
+    end.sort
   end
 
   def show
@@ -12,6 +15,9 @@ class ProductsController < ApplicationController
 
   def new
     @product = Product.new
+    @product_images = Dir.glob(Rails.root.join('app', 'assets', 'images', 'products', '*.png')).map do |path|
+      File.basename(path)
+    end.sort
   end
 
   def create
@@ -27,13 +33,19 @@ class ProductsController < ApplicationController
     )
     
     if @product.save
-      redirect_to @product, notice: 'Product was successfully created.'
+      redirect_to products_path, notice: 'Product was successfully created.'
     else
+      @product_images = Dir.glob(Rails.root.join('app', 'assets', 'images', 'products', '*.png')).map do |path|
+        File.basename(path)
+      end.sort
       render :new
     end
   end
 
   def edit
+    @product_images = Dir.glob(Rails.root.join('app', 'assets', 'images', 'products', '*.png')).map do |path|
+      File.basename(path)
+    end.sort
   end
 
   def update
@@ -46,25 +58,53 @@ class ProductsController < ApplicationController
     @product.updated_at = Time.now
     
     if @product.save
-      redirect_to @product, notice: 'Product was successfully updated.'
+      redirect_to products_path, notice: 'Product was successfully updated.'
     else
+      @product_images = Dir.glob(Rails.root.join('app', 'assets', 'images', 'products', '*.png')).map do |path|
+        File.basename(path)
+      end.sort
       render :edit
+    end
+  end
+
+  def duplicate
+    new_product = Product.new(
+      name: "#{@product.name} - COPY",
+      description: @product.description,
+      image_url: @product.image_url,
+      price: @product.price,
+      points_cost: @product.points_cost,
+      available: @product.available,
+      created_at: Time.now,
+      updated_at: Time.now
+    )
+    
+    if new_product.save
+      redirect_to products_path, notice: 'Product was successfully duplicated.'
+    else
+      redirect_to products_path, alert: 'Failed to duplicate product.'
     end
   end
 
   def destroy
     # Check if product is used in any requests
-    requests = firestore_collection('requests').where('product_id', '==', @product.id).get
+    requests = Request.where(product_id: @product.id)
     
-    # Fix: Check if the enumerable has any elements
-    first_request = requests.first
-    if first_request.nil?
+    if requests.empty?
       # Safe to delete
-      firestore_document('products', @product.id).delete
+      @product.destroy
       redirect_to products_path, notice: 'Product was successfully deleted.'
     else
       # Product is in use
       redirect_to products_path, alert: 'Cannot delete product as it is used in requests.'
+    end
+  end
+  
+  def preview_image
+    @image_name = params[:image]
+    
+    respond_to do |format|
+      format.html { render layout: false }
     end
   end
 

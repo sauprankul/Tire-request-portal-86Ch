@@ -57,6 +57,13 @@ CREATE TABLE requests (
   estimated_arrival TIMESTAMP,
   shipped_date TIMESTAMP,
   received_date TIMESTAMP,
+  shipping_name VARCHAR(255),
+  shipping_phone VARCHAR(255),
+  shipping_address VARCHAR(255),
+  shipping_city VARCHAR(255),
+  shipping_state VARCHAR(255),
+  shipping_zip VARCHAR(255),
+  notes TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
